@@ -6,10 +6,31 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORIES } from "@/lib/mockData";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bold, Italic, Underline } from "lucide-react";
 import { Link } from "wouter";
+import { useRef } from "react";
 
 export default function Post() {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertFormat = (tag: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+    
+    // Simple toggle logic could be added here, but for now just wrapping
+    const newText = text.substring(0, start) + `<${tag}>` + selectedText + `</${tag}>` + text.substring(end);
+    
+    // React state update would be better in a real app, but direct manipulation works for prototype speed
+    textarea.value = newText;
+    textarea.focus();
+    textarea.setSelectionRange(start + tag.length + 2, end + tag.length + 2);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 md:pt-16">
       <Navigation />
@@ -27,12 +48,47 @@ export default function Post() {
         <Card className="border-border bg-card/50 backdrop-blur-sm">
           <CardContent className="p-6 space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="content" className="text-lg">The Bars</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="content" className="text-lg">The Bars</Label>
+                <div className="flex gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 hover:bg-primary/20 hover:text-primary"
+                    onClick={() => insertFormat('b')}
+                    title="Bold"
+                  >
+                    <Bold className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 hover:bg-primary/20 hover:text-primary"
+                    onClick={() => insertFormat('i')}
+                    title="Italic"
+                  >
+                    <Italic className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 hover:bg-primary/20 hover:text-primary"
+                    onClick={() => insertFormat('u')}
+                    title="Underline"
+                  >
+                    <Underline className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <Textarea 
+                ref={textareaRef}
                 id="content" 
                 placeholder="Type your lyrics here... Use line breaks for flow." 
                 className="min-h-[150px] bg-secondary/50 border-border/50 font-mono text-lg focus:border-primary resize-none"
               />
+              <p className="text-xs text-muted-foreground">
+                Tip: Highlight text and click formatting buttons to style your bars.
+              </p>
             </div>
 
             <div className="space-y-2">

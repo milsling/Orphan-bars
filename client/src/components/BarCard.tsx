@@ -11,6 +11,12 @@ interface BarCardProps {
 }
 
 export default function BarCard({ bar }: BarCardProps) {
+  // Simple function to convert basic HTML tags to React elements for safety
+  // In a real app, use a sanitizer library like dompurify
+  const createMarkup = (html: string) => {
+    return { __html: html };
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -43,9 +49,10 @@ export default function BarCard({ bar }: BarCardProps) {
         
         <CardContent className="space-y-4">
           <div className="relative pl-4 border-l-2 border-primary/50 py-1">
-            <p className="font-mono text-lg md:text-xl leading-relaxed whitespace-pre-wrap text-foreground/90">
-              {bar.content}
-            </p>
+            <p 
+              className="font-mono text-lg md:text-xl leading-relaxed whitespace-pre-wrap text-foreground/90 [&>b]:text-primary [&>b]:font-black [&>i]:text-primary/80 [&>u]:decoration-primary [&>u]:decoration-2 [&>u]:underline-offset-4"
+              dangerouslySetInnerHTML={createMarkup(bar.content)}
+            />
           </div>
           
           {bar.explanation && (

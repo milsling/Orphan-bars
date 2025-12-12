@@ -6,7 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-display: "Syne", sans-serif;
+  --font-display: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   --font-sans: "Inter", sans-serif;
 

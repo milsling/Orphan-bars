@@ -29,7 +29,7 @@ export const CURRENT_USER: User = {
 export const MOCK_BARS: Bar[] = [
   {
     id: "1",
-    content: "I move in silence like the 'g' in lasagna, \nreal Gs move in silence like lasagna.",
+    content: "I move in silence like the <b>'g'</b> in lasagna, \nreal <b>Gs</b> move in silence like lasagna.",
     explanation: "Classic line referencing the silent 'g' in the word lasagna and how real gangsters (Gs) operate quietly.",
     author: {
       id: "u2",
