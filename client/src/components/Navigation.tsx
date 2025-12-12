@@ -18,7 +18,7 @@ export default function Navigation() {
       <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 border-b border-border bg-background/80 backdrop-blur-md z-50 items-center px-6 justify-between">
         <div className="flex items-center gap-2">
           <BookOpen className="text-primary h-6 w-6" />
-          <span className="font-display font-bold text-xl tracking-tighter">RHYME BOOK</span>
+          <span className="font-display font-bold text-xl tracking-tighter">ORPHAN BARS</span>
         </div>
         
         <div className="flex items-center gap-8">

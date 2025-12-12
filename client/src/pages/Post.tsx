@@ -70,7 +70,7 @@ export default function Post() {
             </div>
 
             <Button className="w-full text-lg font-bold py-6 bg-primary text-primary-foreground hover:bg-primary/90 mt-4">
-              Post to Rhyme Book
+              Post to Orphan Bars
             </Button>
           </CardContent>
         </Card>
