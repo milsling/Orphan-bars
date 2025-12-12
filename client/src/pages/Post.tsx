@@ -13,9 +13,16 @@ import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Post() {
-  const { addBar } = useBars();
+  const { addBar, currentUser } = useBars();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  // Redirect if not logged in
+  if (!currentUser) {
+    setLocation("/auth");
+    return null;
+  }
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [content, setContent] = useState("");

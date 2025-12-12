@@ -5,10 +5,24 @@ import BarCard from "@/components/BarCard";
 import { Settings, Share2, MapPin, Link as LinkIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBars } from "@/context/BarContext";
+import { useLocation } from "wouter";
 
 export default function Profile() {
-  const { bars, currentUser } = useBars();
+  const { bars, currentUser, logout } = useBars();
+  const [, setLocation] = useLocation();
+
+  // Redirect if not logged in
+  if (!currentUser) {
+    setLocation("/auth");
+    return null;
+  }
+
   const userBars = bars.filter(bar => bar.author.id === currentUser.id);
+
+  const handleLogout = () => {
+    logout();
+    setLocation("/");
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 md:pt-16">
@@ -36,9 +50,9 @@ export default function Profile() {
             </div>
 
             <div className="flex gap-2 w-full md:w-auto mb-2">
-              <Button variant="outline" className="flex-1 md:flex-none gap-2">
+              <Button variant="outline" className="flex-1 md:flex-none gap-2" onClick={handleLogout}>
                 <Settings className="h-4 w-4" />
-                Edit
+                Logout
               </Button>
               <Button className="flex-1 md:flex-none gap-2">
                 <Share2 className="h-4 w-4" />
