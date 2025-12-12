@@ -45,38 +45,38 @@
 }
 
 :root {
-  /* Dark Streetwear Theme */
-  --background: 240 10% 3.9%;
+  /* Snoop Dogg Purple & Dark Gray Theme */
+  --background: 240 5% 10%; /* Dark Charcoal */
   --foreground: 0 0% 98%;
 
-  --card: 240 10% 6%; /* Slightly lighter than bg */
+  --card: 240 5% 13%; /* Slightly lighter charcoal */
   --card-foreground: 0 0% 98%;
 
-  --popover: 240 10% 3.9%;
+  --popover: 240 5% 10%;
   --popover-foreground: 0 0% 98%;
 
-  /* Acid Lime */
-  --primary: 73 95% 55%; 
-  --primary-foreground: 240 5.9% 10%;
+  /* Snoop Purple */
+  --primary: 265 70% 60%; 
+  --primary-foreground: 0 0% 100%;
 
   /* Concrete Grey */
-  --secondary: 240 3.7% 15.9%;
+  --secondary: 240 3.7% 18%;
   --secondary-foreground: 0 0% 98%;
 
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
+  --muted: 240 3.7% 18%;
+  --muted-foreground: 240 5% 70%;
 
-  --accent: 73 95% 55%; /* Same as primary for hover effects */
-  --accent-foreground: 240 5.9% 10%;
+  --accent: 265 70% 60%; 
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 73 95% 55%;
+  --border: 240 3.7% 20%;
+  --input: 240 3.7% 20%;
+  --ring: 265 70% 60%;
 
-  --radius: 0rem; /* Sharp edges for streetwear look */
+  --radius: 0rem; 
 }
 
 @layer base {
