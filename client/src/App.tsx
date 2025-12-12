@@ -8,6 +8,7 @@ import Home from "@/pages/Home";
 import Post from "@/pages/Post";
 import Profile from "@/pages/Profile";
 import { FontSwitcher } from "@/components/FontSwitcher";
+import { BarProvider } from "@/context/BarContext";
 
 function Router() {
   return (
@@ -24,11 +25,13 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <FontSwitcher />
-        <Router />
-      </TooltipProvider>
+      <BarProvider>
+        <TooltipProvider>
+          <Toaster />
+          <FontSwitcher />
+          <Router />
+        </TooltipProvider>
+      </BarProvider>
     </QueryClientProvider>
   );
 }

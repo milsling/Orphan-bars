@@ -2,15 +2,17 @@ import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import BarCard from "@/components/BarCard";
 import CategoryFilter from "@/components/CategoryFilter";
-import { MOCK_BARS, Category } from "@/lib/mockData";
+import { Category } from "@/lib/mockData";
 import { BookOpen } from "lucide-react";
+import { useBars } from "@/context/BarContext";
 
 export default function Home() {
+  const { bars } = useBars();
   const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
 
   const filteredBars = selectedCategory === "All"
-    ? MOCK_BARS
-    : MOCK_BARS.filter(bar => bar.category === selectedCategory);
+    ? bars
+    : bars.filter(bar => bar.category === selectedCategory);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 md:pt-16">

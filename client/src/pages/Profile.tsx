@@ -1,13 +1,14 @@
 import Navigation from "@/components/Navigation";
-import { CURRENT_USER, MOCK_BARS } from "@/lib/mockData";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import BarCard from "@/components/BarCard";
 import { Settings, Share2, MapPin, Link as LinkIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useBars } from "@/context/BarContext";
 
 export default function Profile() {
-  const userBars = MOCK_BARS.filter(bar => bar.author.id === "u2"); // Mocking user bars
+  const { bars, currentUser } = useBars();
+  const userBars = bars.filter(bar => bar.author.id === currentUser.id);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 md:pt-16">
@@ -21,14 +22,14 @@ export default function Profile() {
           <div className="px-4 md:px-8 -mt-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
             <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
               <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-background shadow-xl">
-                <AvatarImage src={CURRENT_USER.avatar} />
-                <AvatarFallback>{CURRENT_USER.username[0]}</AvatarFallback>
+                <AvatarImage src={currentUser.avatar} />
+                <AvatarFallback>{currentUser.username[0]}</AvatarFallback>
               </Avatar>
               
               <div className="mb-2">
                 <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-2">
-                  @{CURRENT_USER.username}
-                  {CURRENT_USER.verified && <span className="text-primary text-xl">✓</span>}
+                  @{currentUser.username}
+                  {currentUser.verified && <span className="text-primary text-xl">✓</span>}
                 </h1>
                 <p className="text-muted-foreground">Lyricist | Queens, NY</p>
               </div>
