@@ -10,7 +10,6 @@ import Profile from "@/pages/Profile";
 import EditProfile from "@/pages/EditProfile";
 import Auth from "@/pages/Auth";
 import Admin from "@/pages/Admin";
-import { FontSwitcher } from "@/components/FontSwitcher";
 import { BarProvider } from "@/context/BarContext";
 
 function Router() {
@@ -34,7 +33,6 @@ function App() {
       <BarProvider>
         <TooltipProvider>
           <Toaster />
-          <FontSwitcher />
           <Router />
         </TooltipProvider>
       </BarProvider>
