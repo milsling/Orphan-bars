@@ -5,24 +5,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { BookOpen, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-
-type SignupStep = "email" | "verify" | "details";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
-  const { login, signup, sendVerificationCode, verifyCode } = useBars();
+  const { login, signupSimple } = useBars();
   const { toast } = useToast();
   
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [signupStep, setSignupStep] = useState<SignupStep>("email");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,64 +41,12 @@ export default function Auth() {
     }
   };
 
-  const handleSendCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      await sendVerificationCode(email);
-      toast({
-        title: "Code sent!",
-        description: "Check your email for a 6-digit verification code.",
-      });
-      setSignupStep("verify");
-    } catch (error: any) {
-      toast({
-        title: "Failed to send code",
-        description: error.message || "Could not send verification email",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const verified = await verifyCode(email, code);
-      if (verified) {
-        toast({
-          title: "Email verified!",
-          description: "Now choose your username and password.",
-        });
-        setSignupStep("details");
-      } else {
-        toast({
-          title: "Invalid code",
-          description: "The code is incorrect or expired.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Verification failed",
-        description: error.message || "Could not verify code",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await signup(username, password, email, code);
+      await signupSimple(username, password);
       toast({
         title: "Account created!",
         description: "Welcome to Orphan Bars. Start dropping heat.",
@@ -121,169 +63,9 @@ export default function Auth() {
     }
   };
 
-  const resetSignup = () => {
-    setSignupStep("email");
-    setEmail("");
-    setCode("");
+  const resetForm = () => {
     setUsername("");
     setPassword("");
-  };
-
-  const renderSignupContent = () => {
-    switch (signupStep) {
-      case "email":
-        return (
-          <form onSubmit={handleSendCode}>
-            <CardHeader>
-              <CardTitle>Create Account</CardTitle>
-              <CardDescription>Enter your email to get started.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input 
-                  id="signup-email" 
-                  data-testid="input-signup-email"
-                  type="email"
-                  placeholder="you@example.com" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="bg-secondary/30 border-border/50"
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                type="submit" 
-                data-testid="button-send-code"
-                className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={isLoading}
-              >
-                {isLoading ? "Sending..." : "Send Verification Code"}
-              </Button>
-            </CardFooter>
-          </form>
-        );
-
-      case "verify":
-        return (
-          <form onSubmit={handleVerifyCode}>
-            <CardHeader>
-              <div className="flex items-center gap-2 mb-2">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={resetSignup}
-                  data-testid="button-back-signup"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <CardTitle>Verify Email</CardTitle>
-              </div>
-              <CardDescription className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Code sent to {email}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Verification Code</Label>
-                <div className="flex justify-center">
-                  <InputOTP
-                    maxLength={6}
-                    value={code}
-                    onChange={(value) => setCode(value)}
-                    data-testid="input-verification-code"
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex-col gap-2">
-              <Button 
-                type="submit" 
-                data-testid="button-verify-code"
-                className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={isLoading || code.length !== 6}
-              >
-                {isLoading ? "Verifying..." : "Verify Code"}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-sm text-muted-foreground"
-                onClick={handleSendCode}
-                disabled={isLoading}
-                data-testid="button-resend-code"
-              >
-                Resend code
-              </Button>
-            </CardFooter>
-          </form>
-        );
-
-      case "details":
-        return (
-          <form onSubmit={handleSignup}>
-            <CardHeader>
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <CardTitle>Almost Done!</CardTitle>
-              </div>
-              <CardDescription>Choose your username and password.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-username">Username</Label>
-                <Input 
-                  id="signup-username" 
-                  data-testid="input-signup-username"
-                  placeholder="SpitFire_99" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  className="bg-secondary/30 border-border/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                <Input 
-                  id="signup-password" 
-                  data-testid="input-signup-password"
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="bg-secondary/30 border-border/50"
-                />
-                <p className="text-xs text-muted-foreground">At least 6 characters</p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                type="submit" 
-                data-testid="button-signup"
-                className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={isLoading}
-              >
-                {isLoading ? "Creating Account..." : "Create Account"}
-              </Button>
-            </CardFooter>
-          </form>
-        );
-    }
   };
 
   return (
@@ -311,7 +93,7 @@ export default function Auth() {
         </div>
 
       <Card className="w-full max-w-md border-border bg-card/50 backdrop-blur-sm">
-        <Tabs defaultValue="login" className="w-full" onValueChange={() => resetSignup()}>
+        <Tabs defaultValue="login" className="w-full" onValueChange={() => resetForm()}>
           <TabsList className="grid w-full grid-cols-2 rounded-t-lg rounded-b-none bg-secondary/50 p-0 h-14">
             <TabsTrigger 
               value="login" 
@@ -373,7 +155,50 @@ export default function Auth() {
           </TabsContent>
           
           <TabsContent value="signup">
-            {renderSignupContent()}
+            <form onSubmit={handleSignup}>
+              <CardHeader>
+                <CardTitle>Create Account</CardTitle>
+                <CardDescription>Choose your username and password to get started.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-username">Username</Label>
+                  <Input 
+                    id="signup-username" 
+                    data-testid="input-signup-username"
+                    placeholder="SpitFire_99" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    className="bg-secondary/30 border-border/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input 
+                    id="signup-password" 
+                    data-testid="input-signup-password"
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="bg-secondary/30 border-border/50"
+                  />
+                  <p className="text-xs text-muted-foreground">At least 6 characters</p>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  type="submit" 
+                  data-testid="button-signup"
+                  className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Creating Account..." : "Create Account"}
+                </Button>
+              </CardFooter>
+            </form>
           </TabsContent>
         </Tabs>
       </Card>

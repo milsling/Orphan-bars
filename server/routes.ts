@@ -143,6 +143,43 @@ export async function registerRoutes(
     }
   });
 
+  // Simple signup without email verification (temporary)
+  app.post("/api/auth/signup-simple", async (req, res, next) => {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({
+        username,
+        email: `${username.toLowerCase()}@placeholder.orphanbars.local`,
+        password: hashedPassword,
+      });
+
+      const { password: _, ...userWithoutPassword } = user;
+      req.login(userWithoutPassword, (err) => {
+        if (err) {
+          return next(err);
+        }
+        res.json(userWithoutPassword);
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/auth/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {

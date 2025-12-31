@@ -43,6 +43,15 @@ export const api = {
     return handleResponse<User>(response);
   },
 
+  signupSimple: async (username: string, password: string): Promise<User> => {
+    const response = await fetch('/api/auth/signup-simple', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    return handleResponse<User>(response);
+  },
+
   login: async (username: string, password: string): Promise<User> => {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
