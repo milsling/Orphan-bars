@@ -14,40 +14,52 @@ export default function Auth() {
   const { login, signup } = useBars();
   const { toast } = useToast();
   
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate network delay
-    setTimeout(() => {
-      login({ email, password });
+    try {
+      await login(username, password);
       toast({
         title: "Welcome back!",
         description: "You're now logged in.",
       });
-      setIsLoading(false);
       setLocation("/");
-    }, 1000);
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid username or password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      signup({ username, email, password });
+    try {
+      await signup(username, password);
       toast({
         title: "Account created!",
         description: "Welcome to Orphan Bars. Start dropping heat.",
       });
-      setIsLoading(false);
       setLocation("/");
-    }, 1000);
+    } catch (error: any) {
+      toast({
+        title: "Signup failed",
+        description: error.message || "Could not create account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -87,21 +99,22 @@ export default function Auth() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="login-username">Username</Label>
                   <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="spitfire@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="login-username" 
+                    data-testid="input-login-username"
+                    placeholder="SpitFire_99"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required 
                     className="bg-secondary/30 border-border/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="login-password">Password</Label>
                   <Input 
-                    id="password" 
+                    id="login-password" 
+                    data-testid="input-login-password"
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -113,6 +126,7 @@ export default function Auth() {
               <CardFooter>
                 <Button 
                   type="submit" 
+                  data-testid="button-login"
                   className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
                   disabled={isLoading}
                 >
@@ -133,6 +147,7 @@ export default function Auth() {
                   <Label htmlFor="signup-username">Username</Label>
                   <Input 
                     id="signup-username" 
+                    data-testid="input-signup-username"
                     placeholder="SpitFire_99" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -141,21 +156,10 @@ export default function Auth() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input 
-                    id="signup-email" 
-                    type="email" 
-                    placeholder="spitfire@example.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-secondary/30 border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <Input 
                     id="signup-password" 
+                    data-testid="input-signup-password"
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -167,6 +171,7 @@ export default function Auth() {
               <CardFooter>
                 <Button 
                   type="submit" 
+                  data-testid="button-signup"
                   className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
                   disabled={isLoading}
                 >

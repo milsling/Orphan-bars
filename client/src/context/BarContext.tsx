@@ -1,58 +1,123 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { Bar, MOCK_BARS, CURRENT_USER, User } from "@/lib/mockData";
+import React, { createContext, useContext, ReactNode } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { User, BarWithUser } from "@shared/schema";
 
 interface BarContextType {
-  bars: Bar[];
-  addBar: (bar: Omit<Bar, "id" | "author" | "likes" | "comments" | "timestamp">) => void;
+  bars: BarWithUser[];
+  isLoadingBars: boolean;
+  addBar: (bar: {
+    content: string;
+    explanation?: string;
+    category: string;
+    tags: string[];
+  }) => Promise<void>;
   currentUser: User | null;
-  login: (credentials: any) => void;
-  signup: (credentials: any) => void;
-  logout: () => void;
+  isLoadingUser: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  signup: (username: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const BarContext = createContext<BarContextType | undefined>(undefined);
 
 export function BarProvider({ children }: { children: ReactNode }) {
-  const [bars, setBars] = useState<Bar[]>(MOCK_BARS);
-  const [currentUser, setCurrentUser] = useState<User | null>(null); // Start logged out for demo
+  const queryClient = useQueryClient();
 
-  const login = (credentials: any) => {
-    // Mock login logic
-    setCurrentUser(CURRENT_USER);
+  // Fetch current user
+  const { data: currentUser = null, isLoading: isLoadingUser } = useQuery<User | null>({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      try {
+        return await api.getCurrentUser();
+      } catch (error) {
+        return null;
+      }
+    },
+  });
+
+  // Fetch all bars
+  const { data: bars = [], isLoading: isLoadingBars } = useQuery<BarWithUser[]>({
+    queryKey: ['bars'],
+    queryFn: () => api.getBars(),
+  });
+
+  // Login mutation
+  const loginMutation = useMutation({
+    mutationFn: ({ username, password }: { username: string; password: string }) =>
+      api.login(username, password),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+    },
+  });
+
+  // Signup mutation
+  const signupMutation = useMutation({
+    mutationFn: ({ username, password }: { username: string; password: string }) =>
+      api.signup(username, password),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+    },
+  });
+
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: () => api.logout(),
+    onSuccess: () => {
+      queryClient.setQueryData(['currentUser'], null);
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+    },
+  });
+
+  // Create bar mutation
+  const createBarMutation = useMutation({
+    mutationFn: (data: {
+      content: string;
+      explanation?: string;
+      category: string;
+      tags: string[];
+    }) => api.createBar(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+    },
+  });
+
+  const login = async (username: string, password: string) => {
+    await loginMutation.mutateAsync({ username, password });
   };
 
-  const signup = (credentials: any) => {
-    // Mock signup logic
-    const newUser: User = {
-      id: "new-user",
-      username: credentials.username || "NewRapper",
-      avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&h=400&fit=crop",
-      verified: false
-    };
-    setCurrentUser(newUser);
+  const signup = async (username: string, password: string) => {
+    await signupMutation.mutateAsync({ username, password });
   };
 
-  const logout = () => {
-    setCurrentUser(null);
+  const logout = async () => {
+    await logoutMutation.mutateAsync();
   };
 
-  const addBar = (newBarData: Omit<Bar, "id" | "author" | "likes" | "comments" | "timestamp">) => {
-    if (!currentUser) return;
-    
-    const newBar: Bar = {
-      ...newBarData,
-      id: Math.random().toString(36).substr(2, 9),
-      author: currentUser,
-      likes: 0,
-      comments: 0,
-      timestamp: "Just now",
-    };
-    
-    setBars((prev) => [newBar, ...prev]);
+  const addBar = async (newBarData: {
+    content: string;
+    explanation?: string;
+    category: string;
+    tags: string[];
+  }) => {
+    await createBarMutation.mutateAsync(newBarData);
   };
 
   return (
-    <BarContext.Provider value={{ bars, addBar, currentUser, login, signup, logout }}>
+    <BarContext.Provider
+      value={{
+        bars,
+        isLoadingBars,
+        addBar,
+        currentUser,
+        isLoadingUser,
+        login,
+        signup,
+        logout,
+      }}
+    >
       {children}
     </BarContext.Provider>
   );

@@ -2,12 +2,13 @@ import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import BarCard from "@/components/BarCard";
 import CategoryFilter from "@/components/CategoryFilter";
-import { Category } from "@/lib/mockData";
 import { BookOpen } from "lucide-react";
 import { useBars } from "@/context/BarContext";
 
+type Category = "Funny" | "Serious" | "Wordplay" | "Storytelling" | "Battle" | "Freestyle";
+
 export default function Home() {
-  const { bars } = useBars();
+  const { bars, isLoadingBars } = useBars();
   const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
 
   const filteredBars = selectedCategory === "All"
@@ -43,14 +44,18 @@ export default function Home() {
             <CategoryFilter selected={selectedCategory} onSelect={setSelectedCategory} />
 
             <div className="px-4 py-6 space-y-6">
-              {filteredBars.map((bar) => (
-                <BarCard key={bar.id} bar={bar} />
-              ))}
-              
-              {filteredBars.length === 0 && (
+              {isLoadingBars ? (
+                <div className="text-center py-20 text-muted-foreground">
+                  <p>Loading bars...</p>
+                </div>
+              ) : filteredBars.length === 0 ? (
                 <div className="text-center py-20 text-muted-foreground">
                   <p>No bars found in this category.</p>
                 </div>
+              ) : (
+                filteredBars.map((bar) => (
+                  <BarCard key={bar.id} bar={bar} />
+                ))
               )}
             </div>
           </div>

@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CATEGORIES, Category } from "@/lib/mockData";
 import { ArrowLeft, Bold, Italic, Underline } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
+
+type Category = "Funny" | "Serious" | "Wordplay" | "Storytelling" | "Battle" | "Freestyle";
+const CATEGORIES: Category[] = ["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"];
 
 export default function Post() {
   const { addBar, currentUser } = useBars();
@@ -29,6 +31,7 @@ export default function Post() {
   const [explanation, setExplanation] = useState("");
   const [category, setCategory] = useState<Category>("Freestyle");
   const [tags, setTags] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const insertFormat = (tag: string) => {
     const textarea = textareaRef.current;
@@ -51,7 +54,7 @@ export default function Post() {
     }, 0);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim()) {
       toast({
         title: "Empty bars?",
@@ -61,19 +64,30 @@ export default function Post() {
       return;
     }
 
-    addBar({
-      content,
-      explanation: explanation.trim() || undefined,
-      category,
-      tags: tags.split(",").map(t => t.trim()).filter(Boolean),
-    });
+    setIsSubmitting(true);
+    try {
+      await addBar({
+        content,
+        explanation: explanation.trim() || undefined,
+        category,
+        tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+      });
 
-    toast({
-      title: "Bars Dropped! 🔥",
-      description: "Your lyric is now live on the feed.",
-    });
+      toast({
+        title: "Bars Dropped! 🔥",
+        description: "Your lyric is now live on the feed.",
+      });
 
-    setLocation("/");
+      setLocation("/");
+    } catch (error: any) {
+      toast({
+        title: "Failed to post",
+        description: error.message || "Could not post your bars. Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -179,8 +193,10 @@ export default function Post() {
             <Button 
               className="w-full text-lg font-bold py-6 bg-primary text-primary-foreground hover:bg-primary/90 mt-4"
               onClick={handleSubmit}
+              disabled={isSubmitting}
+              data-testid="button-post"
             >
-              Post to Orphan Bars
+              {isSubmitting ? "Posting..." : "Post to Orphan Bars"}
             </Button>
           </CardContent>
         </Card>

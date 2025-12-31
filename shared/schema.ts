@@ -22,7 +22,9 @@ export const bars = pgTable("bars", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
+  explanation: text("explanation"),
   category: text("category").notNull(),
+  tags: text("tags").array(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -48,6 +50,15 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertBar = z.infer<typeof insertBarSchema>;
 export type Bar = typeof bars.$inferSelect;
+
+export type BarWithUser = Bar & {
+  user: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+    membershipTier: string;
+  };
+};
 
 export const categoryOptions = ["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"] as const;
 export const membershipTiers = ["free", "donor", "donor_plus"] as const;
