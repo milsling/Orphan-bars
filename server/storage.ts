@@ -1,11 +1,12 @@
-import { users, bars, type User, type InsertUser, type Bar, type InsertBar } from "@shared/schema";
+import { users, bars, verificationCodes, type User, type InsertUser, type Bar, type InsertBar } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   
@@ -14,6 +15,11 @@ export interface IStorage {
   getBars(limit?: number): Promise<Array<Bar & { user: User }>>;
   getBarsByUser(userId: string): Promise<Bar[]>;
   deleteBar(id: string, userId: string): Promise<boolean>;
+
+  // Verification methods
+  createVerificationCode(email: string, code: string): Promise<void>;
+  verifyCode(email: string, code: string): Promise<boolean>;
+  deleteVerificationCodes(email: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -24,6 +30,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 
@@ -91,6 +102,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bars.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  async createVerificationCode(email: string, code: string): Promise<void> {
+    await db.delete(verificationCodes).where(eq(verificationCodes.email, email));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await db.insert(verificationCodes).values({ email, code, expiresAt });
+  }
+
+  async verifyCode(email: string, code: string): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(verificationCodes)
+      .where(
+        and(
+          eq(verificationCodes.email, email),
+          eq(verificationCodes.code, code),
+          gt(verificationCodes.expiresAt, new Date())
+        )
+      );
+    return !!result;
+  }
+
+  async deleteVerificationCodes(email: string): Promise<void> {
+    await db.delete(verificationCodes).where(eq(verificationCodes.email, email));
   }
 }
 

@@ -16,11 +16,29 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export const api = {
   // Auth
-  signup: async (username: string, password: string): Promise<User> => {
+  sendVerificationCode: async (email: string): Promise<{ message: string }> => {
+    const response = await fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
+  verifyCode: async (email: string, code: string): Promise<{ verified: boolean }> => {
+    const response = await fetch('/api/auth/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    return handleResponse<{ verified: boolean }>(response);
+  },
+
+  signup: async (username: string, password: string, email: string, code: string): Promise<User> => {
     const response = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, email, code }),
     });
     return handleResponse<User>(response);
   },

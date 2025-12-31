@@ -6,6 +6,7 @@ import passport from "passport";
 import { insertUserSchema, insertBarSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { sendVerificationEmail, generateVerificationCode } from "./email";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -15,34 +16,86 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
 
   // Auth routes
-  app.post("/api/auth/signup", async (req, res, next) => {
+  app.post("/api/auth/send-code", async (req, res) => {
     try {
-      const result = insertUserSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ 
-          message: fromError(result.error).toString() 
-        });
+      const { email } = req.body;
+      
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ message: "Valid email is required" });
       }
 
-      const { username, password, bio, avatarUrl } = result.data;
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
 
-      // Check if username already exists
+      const code = generateVerificationCode();
+      await storage.createVerificationCode(email, code);
+      
+      const sent = await sendVerificationEmail(email, code);
+      if (!sent) {
+        return res.status(500).json({ message: "Failed to send verification email" });
+      }
+
+      res.json({ message: "Verification code sent" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/verify-code", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      
+      if (!email || !code) {
+        return res.status(400).json({ message: "Email and code are required" });
+      }
+
+      const isValid = await storage.verifyCode(email, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired code" });
+      }
+
+      res.json({ verified: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/signup", async (req, res, next) => {
+    try {
+      const { username, password, email, code } = req.body;
+
+      if (!username || !password || !email || !code) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const isValid = await storage.verifyCode(email, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired verification code" });
+      }
+
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already taken" });
       }
 
-      // Hash password and create user
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
       const hashedPassword = await hashPassword(password);
       const user = await storage.createUser({
         username,
+        email,
         password: hashedPassword,
-        bio: bio || null,
-        avatarUrl: avatarUrl || null,
       });
 
-      // Log the user in
-      const { password: _, ...userWithoutPassword } = user;
+      await storage.deleteVerificationCodes(email);
+      const updatedUser = await storage.updateUser(user.id, { emailVerified: true });
+
+      const { password: _, ...userWithoutPassword } = updatedUser!;
       req.login(userWithoutPassword, (err) => {
         if (err) {
           return next(err);

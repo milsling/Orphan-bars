@@ -15,7 +15,9 @@ interface BarContextType {
   currentUser: User | null;
   isLoadingUser: boolean;
   login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, password: string) => Promise<void>;
+  signup: (username: string, password: string, email: string, code: string) => Promise<void>;
+  sendVerificationCode: (email: string) => Promise<void>;
+  verifyCode: (email: string, code: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -54,8 +56,8 @@ export function BarProvider({ children }: { children: ReactNode }) {
 
   // Signup mutation
   const signupMutation = useMutation({
-    mutationFn: ({ username, password }: { username: string; password: string }) =>
-      api.signup(username, password),
+    mutationFn: ({ username, password, email, code }: { username: string; password: string; email: string; code: string }) =>
+      api.signup(username, password, email, code),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['bars'] });
@@ -88,8 +90,17 @@ export function BarProvider({ children }: { children: ReactNode }) {
     await loginMutation.mutateAsync({ username, password });
   };
 
-  const signup = async (username: string, password: string) => {
-    await signupMutation.mutateAsync({ username, password });
+  const signup = async (username: string, password: string, email: string, code: string) => {
+    await signupMutation.mutateAsync({ username, password, email, code });
+  };
+
+  const sendVerificationCode = async (email: string) => {
+    await api.sendVerificationCode(email);
+  };
+
+  const verifyCode = async (email: string, code: string): Promise<boolean> => {
+    const result = await api.verifyCode(email, code);
+    return result.verified;
   };
 
   const logout = async () => {
@@ -115,6 +126,8 @@ export function BarProvider({ children }: { children: ReactNode }) {
         isLoadingUser,
         login,
         signup,
+        sendVerificationCode,
+        verifyCode,
         logout,
       }}
     >
