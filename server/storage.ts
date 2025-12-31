@@ -1,6 +1,6 @@
-import { users, bars, verificationCodes, type User, type InsertUser, type Bar, type InsertBar } from "@shared/schema";
+import { users, bars, verificationCodes, likes, comments, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type InsertComment } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gt } from "drizzle-orm";
+import { eq, desc, and, gt, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -26,6 +26,17 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   deleteBarAdmin(barId: string): Promise<boolean>;
   deleteUser(userId: string): Promise<boolean>;
+
+  // Like methods
+  toggleLike(userId: string, barId: string): Promise<boolean>;
+  getLikeCount(barId: string): Promise<number>;
+  hasUserLiked(userId: string, barId: string): Promise<boolean>;
+
+  // Comment methods
+  createComment(comment: InsertComment): Promise<Comment>;
+  getComments(barId: string): Promise<Array<Comment & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> }>>;
+  deleteComment(id: string, userId: string): Promise<boolean>;
+  getCommentCount(barId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -157,6 +168,55 @@ export class DatabaseStorage implements IStorage {
     await db.delete(bars).where(eq(bars.userId, userId));
     const result = await db.delete(users).where(eq(users.id, userId)).returning();
     return result.length > 0;
+  }
+
+  async toggleLike(userId: string, barId: string): Promise<boolean> {
+    const [existing] = await db.select().from(likes).where(and(eq(likes.userId, userId), eq(likes.barId, barId)));
+    if (existing) {
+      await db.delete(likes).where(eq(likes.id, existing.id));
+      return false;
+    } else {
+      await db.insert(likes).values({ userId, barId });
+      return true;
+    }
+  }
+
+  async getLikeCount(barId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(likes).where(eq(likes.barId, barId));
+    return result?.count || 0;
+  }
+
+  async hasUserLiked(userId: string, barId: string): Promise<boolean> {
+    const [existing] = await db.select().from(likes).where(and(eq(likes.userId, userId), eq(likes.barId, barId)));
+    return !!existing;
+  }
+
+  async createComment(comment: InsertComment): Promise<Comment> {
+    const [newComment] = await db.insert(comments).values(comment).returning();
+    return newComment;
+  }
+
+  async getComments(barId: string): Promise<Array<Comment & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> }>> {
+    const result = await db
+      .select({
+        comment: comments,
+        user: { id: users.id, username: users.username, avatarUrl: users.avatarUrl }
+      })
+      .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
+      .where(eq(comments.barId, barId))
+      .orderBy(desc(comments.createdAt));
+    return result.map(r => ({ ...r.comment, user: r.user as any }));
+  }
+
+  async deleteComment(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(comments).where(and(eq(comments.id, id), eq(comments.userId, userId))).returning();
+    return result.length > 0;
+  }
+
+  async getCommentCount(barId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(comments).where(eq(comments.barId, barId));
+    return result?.count || 0;
   }
 }
 

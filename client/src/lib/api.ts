@@ -142,6 +142,37 @@ export const api = {
     return handleResponse<{ uploadURL: string; objectPath: string }>(response);
   },
 
+  // Likes
+  toggleLike: async (barId: string): Promise<{ liked: boolean; count: number }> => {
+    const response = await fetch(`/api/bars/${barId}/like`, { method: 'POST' });
+    return handleResponse<{ liked: boolean; count: number }>(response);
+  },
+
+  getLikes: async (barId: string): Promise<{ count: number; liked: boolean }> => {
+    const response = await fetch(`/api/bars/${barId}/likes`);
+    return handleResponse<{ count: number; liked: boolean }>(response);
+  },
+
+  // Comments
+  getComments: async (barId: string): Promise<any[]> => {
+    const response = await fetch(`/api/bars/${barId}/comments`);
+    return handleResponse<any[]>(response);
+  },
+
+  createComment: async (barId: string, content: string): Promise<any> => {
+    const response = await fetch(`/api/bars/${barId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    return handleResponse<any>(response);
+  },
+
+  deleteComment: async (commentId: string): Promise<{ message: string }> => {
+    const response = await fetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+    return handleResponse<{ message: string }>(response);
+  },
+
   // Admin
   getAllUsers: async (): Promise<User[]> => {
     const response = await fetch('/api/admin/users');

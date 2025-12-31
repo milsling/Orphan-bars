@@ -69,21 +69,52 @@
 }
 
 :root {
+  /* Light Theme */
+  --background: 0 0% 98%;
+  --foreground: 240 5% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 240 5% 10%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 5% 10%;
+
+  --primary: 265 70% 55%; 
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 240 5% 92%;
+  --secondary-foreground: 240 5% 10%;
+
+  --muted: 240 5% 92%;
+  --muted-foreground: 240 5% 45%;
+
+  --accent: 265 70% 55%; 
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 62.8% 45%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 240 5% 85%;
+  --input: 240 5% 85%;
+  --ring: 265 70% 55%;
+
+  --radius: 0rem; 
+}
+
+.dark {
   /* Snoop Dogg Purple & Dark Gray Theme */
-  --background: 240 5% 10%; /* Dark Charcoal */
+  --background: 240 5% 10%;
   --foreground: 0 0% 98%;
 
-  --card: 240 5% 13%; /* Slightly lighter charcoal */
+  --card: 240 5% 13%;
   --card-foreground: 0 0% 98%;
 
   --popover: 240 5% 10%;
   --popover-foreground: 0 0% 98%;
 
-  /* Snoop Purple */
   --primary: 265 70% 60%; 
   --primary-foreground: 0 0% 100%;
 
-  /* Concrete Grey */
   --secondary: 240 3.7% 18%;
   --secondary-foreground: 0 0% 98%;
 
@@ -99,8 +130,6 @@
   --border: 240 3.7% 20%;
   --input: 240 3.7% 20%;
   --ring: 265 70% 60%;
-
-  --radius: 0rem; 
 }
 
 @layer base {

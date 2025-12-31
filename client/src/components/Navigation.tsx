@@ -3,6 +3,7 @@ import { Home, User, PlusSquare, Search, BookOpen, LogIn, Shield } from "lucide-
 import { cn } from "@/lib/utils";
 import { useBars } from "@/context/BarContext";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -47,6 +48,8 @@ export default function Navigation() {
               </div>
             </Link>
           ))}
+          
+          <ThemeToggle />
           
           {!currentUser && (
             <Link href="/auth">

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { BarWithUser } from "@shared/schema";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { motion } from "framer-motion";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { motion, AnimatePresence } from "framer-motion";
 import { formatTimestamp } from "@/lib/formatDate";
 import { useBars } from "@/context/BarContext";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,12 +32,56 @@ export default function BarCard({ bar }: BarCardProps) {
   const queryClient = useQueryClient();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState("");
   const [editContent, setEditContent] = useState(bar.content);
   const [editExplanation, setEditExplanation] = useState(bar.explanation || "");
   const [editCategory, setEditCategory] = useState(bar.category);
   const [editTags, setEditTags] = useState(bar.tags?.join(", ") || "");
 
   const isOwner = currentUser?.id === bar.user.id;
+
+  const { data: likesData } = useQuery({
+    queryKey: ['likes', bar.id],
+    queryFn: () => api.getLikes(bar.id),
+  });
+
+  const { data: commentsData = [], refetch: refetchComments } = useQuery({
+    queryKey: ['comments', bar.id],
+    queryFn: () => api.getComments(bar.id),
+    enabled: showComments,
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: () => api.toggleLike(bar.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['likes', bar.id] });
+    },
+    onError: (error: any) => {
+      if (error.message.includes("Not authenticated")) {
+        toast({ title: "Login required", description: "You need to be logged in to like posts", variant: "destructive" });
+      }
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: (content: string) => api.createComment(bar.id, content),
+    onSuccess: () => {
+      setNewComment("");
+      refetchComments();
+      queryClient.invalidateQueries({ queryKey: ['comments', bar.id] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) => api.deleteComment(commentId),
+    onSuccess: () => {
+      refetchComments();
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: () => api.updateBar(bar.id, {
@@ -68,6 +113,24 @@ export default function BarCard({ bar }: BarCardProps) {
 
   const createMarkup = (html: string) => {
     return { __html: html };
+  };
+
+  const handleLike = () => {
+    if (!currentUser) {
+      toast({ title: "Login required", description: "You need to be logged in to like posts", variant: "destructive" });
+      return;
+    }
+    likeMutation.mutate();
+  };
+
+  const handleComment = () => {
+    if (!currentUser) {
+      toast({ title: "Login required", description: "You need to be logged in to comment", variant: "destructive" });
+      return;
+    }
+    if (newComment.trim()) {
+      commentMutation.mutate(newComment.trim());
+    }
   };
 
   return (
@@ -151,16 +214,29 @@ export default function BarCard({ bar }: BarCardProps) {
             </div>
           </CardContent>
 
-          <CardFooter className="border-t border-white/5 py-3">
+          <CardFooter className="border-t border-white/5 py-3 flex-col">
             <div className="flex w-full items-center justify-between text-muted-foreground">
-              <Button variant="ghost" size="sm" className="gap-2 hover:text-red-500 hover:bg-red-500/10 transition-colors" data-testid={`button-like-${bar.id}`}>
-                <Heart className="h-4 w-4" />
-                <span className="text-xs">0</span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={`gap-2 transition-colors ${likesData?.liked ? 'text-red-500' : 'hover:text-red-500 hover:bg-red-500/10'}`}
+                onClick={handleLike}
+                disabled={likeMutation.isPending}
+                data-testid={`button-like-${bar.id}`}
+              >
+                <Heart className={`h-4 w-4 ${likesData?.liked ? 'fill-current' : ''}`} />
+                <span className="text-xs">{likesData?.count || 0}</span>
               </Button>
               
-              <Button variant="ghost" size="sm" className="gap-2 hover:text-blue-400 hover:bg-blue-400/10 transition-colors" data-testid={`button-comment-${bar.id}`}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={`gap-2 transition-colors ${showComments ? 'text-blue-400' : 'hover:text-blue-400 hover:bg-blue-400/10'}`}
+                onClick={() => setShowComments(!showComments)}
+                data-testid={`button-comment-${bar.id}`}
+              >
                 <MessageCircle className="h-4 w-4" />
-                <span className="text-xs">0</span>
+                <span className="text-xs">{commentsData.length || 0}</span>
               </Button>
               
               <Button variant="ghost" size="sm" className="gap-2 hover:text-primary hover:bg-primary/10 transition-colors" data-testid={`button-share-${bar.id}`}>
@@ -168,6 +244,73 @@ export default function BarCard({ bar }: BarCardProps) {
                 <span className="text-xs">Share</span>
               </Button>
             </div>
+
+            <AnimatePresence>
+              {showComments && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="w-full mt-4 overflow-hidden"
+                >
+                  <div className="space-y-3">
+                    {currentUser && (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add a comment..."
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleComment()}
+                          className="flex-1 bg-secondary/30"
+                          data-testid={`input-comment-${bar.id}`}
+                        />
+                        <Button 
+                          size="icon" 
+                          onClick={handleComment}
+                          disabled={!newComment.trim() || commentMutation.isPending}
+                          data-testid={`button-send-comment-${bar.id}`}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    
+                    <ScrollArea className="max-h-48">
+                      <div className="space-y-2">
+                        {commentsData.map((comment: any) => (
+                          <div key={comment.id} className="flex gap-2 p-2 bg-secondary/20 rounded-md">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={comment.user?.avatarUrl || undefined} />
+                              <AvatarFallback className="text-xs">{comment.user?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold">@{comment.user?.username}</span>
+                                <span className="text-[10px] text-muted-foreground">{formatTimestamp(comment.createdAt)}</span>
+                              </div>
+                              <p className="text-sm text-foreground/80">{comment.content}</p>
+                            </div>
+                            {currentUser?.id === comment.userId && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={() => deleteCommentMutation.mutate(comment.id)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        {commentsData.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">No comments yet</p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </CardFooter>
         </Card>
       </motion.div>

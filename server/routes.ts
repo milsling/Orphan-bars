@@ -254,6 +254,66 @@ export async function registerRoutes(
     }
   });
 
+  // Like routes
+  app.post("/api/bars/:id/like", isAuthenticated, async (req, res) => {
+    try {
+      const liked = await storage.toggleLike(req.user!.id, req.params.id);
+      const count = await storage.getLikeCount(req.params.id);
+      res.json({ liked, count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/bars/:id/likes", async (req, res) => {
+    try {
+      const count = await storage.getLikeCount(req.params.id);
+      const liked = req.isAuthenticated() ? await storage.hasUserLiked(req.user!.id, req.params.id) : false;
+      res.json({ count, liked });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Comment routes
+  app.get("/api/bars/:id/comments", async (req, res) => {
+    try {
+      const barComments = await storage.getComments(req.params.id);
+      res.json(barComments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/bars/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+      const comment = await storage.createComment({
+        userId: req.user!.id,
+        barId: req.params.id,
+        content: content.trim(),
+      });
+      res.json(comment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/comments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteComment(req.params.id, req.user!.id);
+      if (!success) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      res.json({ message: "Comment deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Profile routes
   app.get("/api/users/:username", async (req, res) => {
     try {

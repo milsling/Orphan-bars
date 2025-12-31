@@ -1,19 +1,39 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Navigation from "@/components/Navigation";
 import BarCard from "@/components/BarCard";
 import CategoryFilter from "@/components/CategoryFilter";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Flame, Trophy, Grid3X3 } from "lucide-react";
 import { useBars } from "@/context/BarContext";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Category = "Funny" | "Serious" | "Wordplay" | "Storytelling" | "Battle" | "Freestyle";
+type FeedTab = "latest" | "top" | "trending" | "categories";
 
 export default function Home() {
   const { bars, isLoadingBars } = useBars();
   const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
+  const [activeTab, setActiveTab] = useState<FeedTab>("latest");
 
-  const filteredBars = selectedCategory === "All"
-    ? bars
-    : bars.filter(bar => bar.category === selectedCategory);
+  const filteredBars = useMemo(() => {
+    let result = [...bars];
+
+    if (activeTab === "categories" && selectedCategory !== "All") {
+      result = result.filter(bar => bar.category === selectedCategory);
+    }
+
+    if (activeTab === "top") {
+      result = result.sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
+
+    if (activeTab === "trending") {
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      result = result.filter(bar => new Date(bar.createdAt).getTime() > oneDayAgo);
+    }
+
+    return result;
+  }, [bars, activeTab, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 md:pt-16">
@@ -41,7 +61,32 @@ export default function Home() {
               </p>
             </div>
 
-            <CategoryFilter selected={selectedCategory} onSelect={setSelectedCategory} />
+            <div className="px-4 mb-4">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FeedTab)} className="w-full">
+                <TabsList className="w-full grid grid-cols-4 bg-secondary/50">
+                  <TabsTrigger value="latest" className="gap-1.5 text-xs sm:text-sm" data-testid="tab-latest">
+                    <BookOpen className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Latest</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="top" className="gap-1.5 text-xs sm:text-sm" data-testid="tab-top">
+                    <Trophy className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Top</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="trending" className="gap-1.5 text-xs sm:text-sm" data-testid="tab-trending">
+                    <Flame className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Trending</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="categories" className="gap-1.5 text-xs sm:text-sm" data-testid="tab-categories">
+                    <Grid3X3 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Categories</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {activeTab === "categories" && (
+              <CategoryFilter selected={selectedCategory} onSelect={setSelectedCategory} />
+            )}
 
             <div className="px-4 py-6 space-y-6">
               {isLoadingBars ? (
@@ -50,7 +95,7 @@ export default function Home() {
                 </div>
               ) : filteredBars.length === 0 ? (
                 <div className="text-center py-20 text-muted-foreground">
-                  <p>No bars found in this category.</p>
+                  <p>No bars found{activeTab === "trending" ? " in the last 24 hours" : activeTab === "categories" ? " in this category" : ""}.</p>
                 </div>
               ) : (
                 filteredBars.map((bar) => (
