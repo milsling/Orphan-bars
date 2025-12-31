@@ -173,6 +173,16 @@ export const api = {
     return handleResponse<{ message: string }>(response);
   },
 
+  // Password
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await fetch('/api/users/me/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
   // Admin
   getAllUsers: async (): Promise<User[]> => {
     const response = await fetch('/api/admin/users');
