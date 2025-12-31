@@ -44,6 +44,11 @@ export default function Profile() {
                 <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-2">
                   @{currentUser.username}
                   {currentUser.membershipTier !== "free" && <span className="text-primary text-xl">✓</span>}
+                  {currentUser.username.toLowerCase() === "milsling" && (
+                    <span className="ml-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-normal">
+                      Creator
+                    </span>
+                  )}
                 </h1>
                 <p className="text-muted-foreground">{currentUser.bio || "Lyricist"}</p>
               </div>
