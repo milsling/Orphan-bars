@@ -287,13 +287,15 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <Link href="/">
-        <Button variant="ghost" className="absolute top-4 left-4 gap-2" data-testid="button-back-home">
-          <Home className="h-4 w-4" />
-          Back to Feed
-        </Button>
-      </Link>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative">
+      <div className="fixed top-4 left-4 z-50">
+        <Link href="/">
+          <Button variant="outline" className="gap-2" data-testid="button-back-home">
+            <Home className="h-4 w-4" />
+            Back to Feed
+          </Button>
+        </Link>
+      </div>
       
       <div className="mb-8 text-center space-y-2">
         <Link href="/">
