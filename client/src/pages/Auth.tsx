@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { BookOpen, ArrowLeft, Mail, CheckCircle, Home } from "lucide-react";
+import { Link } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -287,11 +288,20 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <Link href="/">
+        <Button variant="ghost" className="absolute top-4 left-4 gap-2" data-testid="button-back-home">
+          <Home className="h-4 w-4" />
+          Back to Feed
+        </Button>
+      </Link>
+      
       <div className="mb-8 text-center space-y-2">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <BookOpen className="text-primary h-10 w-10" />
-          <span className="font-display font-black text-3xl tracking-tighter">ORPHAN BARS</span>
-        </div>
+        <Link href="/">
+          <div className="flex items-center justify-center gap-2 mb-4 cursor-pointer hover:opacity-80 transition-opacity">
+            <BookOpen className="text-primary h-10 w-10" />
+            <span className="font-display font-black text-3xl tracking-tighter">ORPHAN BARS</span>
+          </div>
+        </Link>
         <p className="text-muted-foreground max-w-sm mx-auto">
           Join the community of lyricists. Share your bars, get feedback, and build your catalog.
         </p>

@@ -55,7 +55,7 @@ export default function Navigation() {
             <Link href="/auth">
               <Button size="sm" className="font-bold gap-2">
                 <LogIn className="h-4 w-4" />
-                Login / Join
+                Login
               </Button>
             </Link>
           )}
@@ -83,7 +83,7 @@ export default function Navigation() {
               location === "/auth" ? "text-primary" : "text-muted-foreground"
             )}>
               <LogIn className={cn("h-6 w-6", location === "/auth" && "fill-current/20")} />
-              <span className="text-[10px] font-medium">Join</span>
+              <span className="text-[10px] font-medium">Login</span>
             </div>
           </Link>
         )}
