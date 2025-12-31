@@ -197,7 +197,7 @@ export default function BarCard({ bar }: BarCardProps) {
             
             {bar.explanation && (
               <div className="bg-secondary/30 p-3 rounded-md text-sm text-muted-foreground italic" data-testid={`text-explanation-${bar.id}`}>
-                <span className="font-bold text-primary/80 not-italic mr-2">Entendre:</span>
+                <span className="font-bold text-primary/80 not-italic mr-2">Breakdown:</span>
                 {bar.explanation}
               </div>
             )}
