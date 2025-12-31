@@ -60,6 +60,7 @@ export class DatabaseStorage implements IStorage {
           id: users.id,
           username: users.username,
           bio: users.bio,
+          location: users.location,
           avatarUrl: users.avatarUrl,
           membershipTier: users.membershipTier,
           membershipExpiresAt: users.membershipExpiresAt,

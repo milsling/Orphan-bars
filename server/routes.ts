@@ -5,12 +5,14 @@ import { setupAuth, isAuthenticated, hashPassword } from "./auth";
 import passport from "passport";
 import { insertUserSchema, insertBarSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   setupAuth(app);
+  registerObjectStorageRoutes(app);
 
   // Auth routes
   app.post("/api/auth/signup", async (req, res, next) => {
@@ -154,11 +156,14 @@ export async function registerRoutes(
 
   app.patch("/api/users/me", isAuthenticated, async (req, res) => {
     try {
-      const { bio, avatarUrl } = req.body;
-      const user = await storage.updateUser(req.user!.id, {
-        bio,
-        avatarUrl,
-      });
+      const { bio, location, avatarUrl } = req.body;
+      const updates: Record<string, any> = {};
+      
+      if (bio !== undefined) updates.bio = bio;
+      if (location !== undefined) updates.location = location;
+      if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+
+      const user = await storage.updateUser(req.user!.id, updates);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });

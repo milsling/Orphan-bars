@@ -2,10 +2,10 @@ import Navigation from "@/components/Navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import BarCard from "@/components/BarCard";
-import { Settings, Share2, MapPin, Link as LinkIcon } from "lucide-react";
+import { Settings, Share2, MapPin, Edit } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBars } from "@/context/BarContext";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Profile() {
   const { bars, currentUser, logout } = useBars();
@@ -50,11 +50,17 @@ export default function Profile() {
             </div>
 
             <div className="flex gap-2 w-full md:w-auto mb-2">
-              <Button variant="outline" className="flex-1 md:flex-none gap-2" onClick={handleLogout}>
+              <Link href="/profile/edit">
+                <Button variant="outline" className="gap-2" data-testid="button-edit-profile">
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </Button>
+              </Link>
+              <Button variant="outline" className="gap-2" onClick={handleLogout} data-testid="button-logout">
                 <Settings className="h-4 w-4" />
                 Logout
               </Button>
-              <Button className="flex-1 md:flex-none gap-2">
+              <Button className="gap-2" data-testid="button-share">
                 <Share2 className="h-4 w-4" />
                 Share
               </Button>
@@ -79,21 +85,20 @@ export default function Profile() {
             </div>
           </div>
 
-          <p className="text-sm md:text-base max-w-xl">
-            Just here to share some thoughts and rhymes. Love wordplay and storytelling. 
-            Check out my mixtape link below 👇
-          </p>
+          {currentUser.bio && (
+            <p className="text-sm md:text-base max-w-xl" data-testid="text-bio">
+              {currentUser.bio}
+            </p>
+          )}
 
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              Queens, NY
+          {currentUser.location && (
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1" data-testid="text-location">
+                <MapPin className="h-3 w-3" />
+                {currentUser.location}
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-primary hover:underline cursor-pointer">
-              <LinkIcon className="h-3 w-3" />
-              soundcloud.com/spitfire99
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Tabs */}

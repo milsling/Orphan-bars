@@ -86,6 +86,7 @@ export const api = {
 
   updateProfile: async (data: {
     bio?: string;
+    location?: string;
     avatarUrl?: string;
   }): Promise<User> => {
     const response = await fetch('/api/users/me', {
@@ -94,5 +95,18 @@ export const api = {
       body: JSON.stringify(data),
     });
     return handleResponse<User>(response);
+  },
+
+  requestUploadUrl: async (file: { name: string; size: number; type: string }): Promise<{ uploadURL: string; objectPath: string }> => {
+    const response = await fetch('/api/uploads/request-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: file.name,
+        size: file.size,
+        contentType: file.type,
+      }),
+    });
+    return handleResponse<{ uploadURL: string; objectPath: string }>(response);
   },
 };

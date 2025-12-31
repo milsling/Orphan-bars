@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Post from "@/pages/Post";
 import Profile from "@/pages/Profile";
+import EditProfile from "@/pages/EditProfile";
 import Auth from "@/pages/Auth";
 import { FontSwitcher } from "@/components/FontSwitcher";
 import { BarProvider } from "@/context/BarContext";
@@ -18,7 +19,8 @@ function Router() {
       <Route path="/auth" component={Auth} />
       <Route path="/post" component={Post} />
       <Route path="/profile" component={Profile} />
-      <Route path="/discover" component={Home} /> {/* Reuse Home for now */}
+      <Route path="/profile/edit" component={EditProfile} />
+      <Route path="/discover" component={Home} />
       <Route component={NotFound} />
     </Switch>
   );
