@@ -54,7 +54,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto">
             <div className="px-4 py-8 md:text-center space-y-2">
               <h1 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tighter text-foreground">
-                Drop Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-400">Bars</span>
+                Drop Your <span className="text-foreground font-black italic">Bars</span>
               </h1>
               <p className="text-muted-foreground text-lg md:text-xl max-w-xl mx-auto">
                 The definitive archive for lyricists, punchline kings, and freestyle poets.
