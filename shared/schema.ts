@@ -58,6 +58,13 @@ export const insertBarSchema = createInsertSchema(bars).omit({
   createdAt: true,
 });
 
+export const updateBarSchema = z.object({
+  content: z.string().min(1).max(2000).optional(),
+  explanation: z.string().max(500).optional().nullable(),
+  category: z.enum(["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"]).optional(),
+  tags: z.array(z.string()).optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertBar = z.infer<typeof insertBarSchema>;

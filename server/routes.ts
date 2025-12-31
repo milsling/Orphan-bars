@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, hashPassword } from "./auth";
 import passport from "passport";
-import { insertUserSchema, insertBarSchema } from "@shared/schema";
+import { insertUserSchema, insertBarSchema, updateBarSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendVerificationEmail, generateVerificationCode } from "./email";
@@ -212,6 +212,31 @@ export async function registerRoutes(
     try {
       const bars = await storage.getBarsByUser(req.params.userId);
       res.json(bars);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/bars/:id", isAuthenticated, async (req, res) => {
+    try {
+      const result = updateBarSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: fromError(result.error).toString() 
+        });
+      }
+
+      const updates: Record<string, any> = {};
+      if (result.data.content !== undefined) updates.content = result.data.content;
+      if (result.data.explanation !== undefined) updates.explanation = result.data.explanation;
+      if (result.data.category !== undefined) updates.category = result.data.category;
+      if (result.data.tags !== undefined) updates.tags = result.data.tags;
+
+      const bar = await storage.updateBar(req.params.id, req.user!.id, updates);
+      if (!bar) {
+        return res.status(404).json({ message: "Bar not found or you don't have permission" });
+      }
+      res.json(bar);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

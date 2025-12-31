@@ -96,6 +96,20 @@ export const api = {
     return handleResponse<{ message: string }>(response);
   },
 
+  updateBar: async (barId: string, data: {
+    content?: string;
+    explanation?: string;
+    category?: string;
+    tags?: string[];
+  }): Promise<BarWithUser> => {
+    const response = await fetch(`/api/bars/${barId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<BarWithUser>(response);
+  },
+
   // Users
   getUser: async (username: string): Promise<User> => {
     const response = await fetch(`/api/users/${username}`);
