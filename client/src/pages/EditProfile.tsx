@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Camera, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Lock, AtSign } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -24,9 +24,22 @@ export default function EditProfile() {
   const [location, setLocationField] = useState(currentUser?.location || "");
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl || "");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [newUsername, setNewUsername] = useState(currentUser?.username || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const canChangeUsername = () => {
+    if (!currentUser?.usernameChangedAt) return true;
+    const daysSinceChange = (Date.now() - new Date(currentUser.usernameChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceChange >= 15;
+  };
+
+  const getDaysUntilUsernameChange = () => {
+    if (!currentUser?.usernameChangedAt) return 0;
+    const daysSinceChange = (Date.now() - new Date(currentUser.usernameChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(15 - daysSinceChange));
+  };
 
   if (!currentUser) {
     setLocation("/auth");
@@ -48,6 +61,24 @@ export default function EditProfile() {
       toast({
         title: "Update failed",
         description: error.message || "Could not update profile",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const changeUsernameMutation = useMutation({
+    mutationFn: () => api.changeUsername(newUsername),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      toast({
+        title: "Username changed!",
+        description: "Your username has been updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Username change failed",
+        description: error.message || "Could not change username",
         variant: "destructive",
       });
     },
@@ -209,14 +240,31 @@ export default function EditProfile() {
 
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={currentUser.username}
-                disabled
-                className="bg-secondary/30 border-border/50"
-                data-testid="input-username"
-              />
-              <p className="text-xs text-muted-foreground">Username cannot be changed</p>
+              <div className="flex gap-2">
+                <Input
+                  id="username"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  disabled={!canChangeUsername()}
+                  className="bg-secondary/30 border-border/50 flex-1"
+                  data-testid="input-username"
+                  maxLength={20}
+                />
+                {canChangeUsername() && newUsername !== currentUser.username && (
+                  <Button
+                    onClick={() => changeUsernameMutation.mutate()}
+                    disabled={changeUsernameMutation.isPending || newUsername.length < 3}
+                    data-testid="button-change-username"
+                  >
+                    {changeUsernameMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                )}
+              </div>
+              {canChangeUsername() ? (
+                <p className="text-xs text-muted-foreground">3-20 characters, letters, numbers, and underscores only</p>
+              ) : (
+                <p className="text-xs text-amber-500">You can change your username again in {getDaysUntilUsernameChange()} days</p>
+              )}
             </div>
 
             <div className="space-y-2">

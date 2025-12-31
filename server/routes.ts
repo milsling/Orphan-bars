@@ -350,6 +350,66 @@ export async function registerRoutes(
     }
   });
 
+  // Change username route (once every 15 days)
+  app.post("/api/users/me/username", isAuthenticated, async (req, res) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username || username.trim().length < 3) {
+        return res.status(400).json({ message: "Username must be at least 3 characters" });
+      }
+
+      if (username.length > 20) {
+        return res.status(400).json({ message: "Username must be 20 characters or less" });
+      }
+
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return res.status(400).json({ message: "Username can only contain letters, numbers, and underscores" });
+      }
+
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check 15-day restriction
+      if (user.usernameChangedAt) {
+        const daysSinceChange = (Date.now() - new Date(user.usernameChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceChange < 15) {
+          const daysRemaining = Math.ceil(15 - daysSinceChange);
+          return res.status(400).json({ 
+            message: `You can change your username again in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}` 
+          });
+        }
+      }
+
+      // Check if username is actually changing
+      if (username.trim().toLowerCase() === user.username.toLowerCase()) {
+        return res.status(400).json({ message: "New username must be different from current username" });
+      }
+
+      // Check if username is taken
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser && existingUser.id !== user.id) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+
+      const updatedUser = await storage.updateUser(req.user!.id, { 
+        username: username.trim(),
+        usernameChangedAt: new Date()
+      });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update username" });
+      }
+
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Change password route
   app.post("/api/users/me/password", isAuthenticated, async (req, res) => {
     try {
