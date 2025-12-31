@@ -17,7 +17,7 @@ export default function Profile() {
     return null;
   }
 
-  const userBars = bars.filter(bar => bar.author.id === currentUser.id);
+  const userBars = bars.filter(bar => bar.userId === currentUser.id);
 
   const handleLogout = () => {
     logout();
@@ -36,16 +36,16 @@ export default function Profile() {
           <div className="px-4 md:px-8 -mt-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
             <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
               <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-background shadow-xl">
-                <AvatarImage src={currentUser.avatar} />
-                <AvatarFallback>{currentUser.username[0]}</AvatarFallback>
+                <AvatarImage src={currentUser.avatarUrl || undefined} />
+                <AvatarFallback>{currentUser.username[0].toUpperCase()}</AvatarFallback>
               </Avatar>
               
               <div className="mb-2">
                 <h1 className="text-2xl md:text-3xl font-display font-bold flex items-center gap-2">
                   @{currentUser.username}
-                  {currentUser.verified && <span className="text-primary text-xl">✓</span>}
+                  {currentUser.membershipTier !== "free" && <span className="text-primary text-xl">✓</span>}
                 </h1>
-                <p className="text-muted-foreground">Lyricist | Queens, NY</p>
+                <p className="text-muted-foreground">{currentUser.bio || "Lyricist"}</p>
               </div>
             </div>
 

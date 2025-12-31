@@ -54,15 +54,25 @@ export class DatabaseStorage implements IStorage {
 
   async getBars(limit: number = 50): Promise<Array<Bar & { user: User }>> {
     const result = await db
-      .select()
+      .select({
+        bar: bars,
+        user: {
+          id: users.id,
+          username: users.username,
+          bio: users.bio,
+          avatarUrl: users.avatarUrl,
+          membershipTier: users.membershipTier,
+          membershipExpiresAt: users.membershipExpiresAt,
+        }
+      })
       .from(bars)
       .leftJoin(users, eq(bars.userId, users.id))
       .orderBy(desc(bars.createdAt))
       .limit(limit);
     
     return result.map(row => ({
-      ...row.bars,
-      user: row.users!,
+      ...row.bar,
+      user: row.user as any,
     }));
   }
 
