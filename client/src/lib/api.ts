@@ -309,6 +309,15 @@ export const api = {
     return handleResponse<User>(response);
   },
 
+  adminModerateBar: async (barId: string, reason: string): Promise<{ message: string }> => {
+    const response = await apiFetch(`/api/admin/bars/${barId}/moderate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    return handleResponse<{ message: string }>(response);
+  },
+
   // Notifications
   getNotifications: async (limit = 20): Promise<any[]> => {
     const response = await apiFetch(`/api/notifications?limit=${limit}`);

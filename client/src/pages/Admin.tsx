@@ -7,9 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban } from "lucide-react";
 import { useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +24,8 @@ export default function Admin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const [moderateBarId, setModerateBarId] = useState<string | null>(null);
+  const [moderateReason, setModerateReason] = useState("");
 
   const { data: allUsers = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ['admin', 'users'],
@@ -97,6 +102,26 @@ export default function Admin() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  const moderateBarMutation = useMutation({
+    mutationFn: ({ barId, reason }: { barId: string; reason: string }) => 
+      api.adminModerateBar(barId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+      setModerateBarId(null);
+      setModerateReason("");
+      toast({ title: "Post removed and user notified" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleModerate = () => {
+    if (moderateBarId && moderateReason.trim()) {
+      moderateBarMutation.mutate({ barId: moderateBarId, reason: moderateReason.trim() });
+    }
+  };
 
   if (!currentUser) {
     setLocation("/auth");
@@ -331,30 +356,44 @@ export default function Admin() {
                         <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{bar.content}</p>
                         <Badge variant="outline" className="mt-2 text-xs">{bar.category}</Badge>
                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 ml-2" data-testid={`button-delete-bar-${bar.id}`}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Bar</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this bar? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteBarMutation.mutate(bar.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-orange-500 hover:bg-orange-500/10"
+                          onClick={() => {
+                            setModerateBarId(bar.id);
+                            setModerateReason("");
+                          }}
+                          data-testid={`button-moderate-bar-${bar.id}`}
+                        >
+                          <Ban className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" data-testid={`button-delete-bar-${bar.id}`}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Bar</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this bar? This action cannot be undone. The user will NOT be notified.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteBarMutation.mutate(bar.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   ))}
                   {bars.length === 0 && (
@@ -365,6 +404,43 @@ export default function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={!!moderateBarId} onOpenChange={(open) => !open && setModerateBarId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Moderate Post</DialogTitle>
+              <DialogDescription>
+                Remove this post and notify the user. They will receive a notification with your reason.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason for removal</Label>
+                <Textarea
+                  id="reason"
+                  placeholder="e.g., Violates community guidelines, inappropriate content..."
+                  value={moderateReason}
+                  onChange={(e) => setModerateReason(e.target.value)}
+                  className="min-h-[100px]"
+                  data-testid="input-moderation-reason"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setModerateBarId(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleModerate}
+                disabled={!moderateReason.trim() || moderateBarMutation.isPending}
+                className="bg-orange-500 hover:bg-orange-600"
+                data-testid="button-confirm-moderate"
+              >
+                {moderateBarMutation.isPending ? "Removing..." : "Remove & Notify"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

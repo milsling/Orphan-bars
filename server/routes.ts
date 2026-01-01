@@ -758,6 +758,43 @@ export async function registerRoutes(
     }
   });
 
+  // Moderate bar - remove and notify user
+  app.post("/api/admin/bars/:id/moderate", isAdmin, async (req, res) => {
+    try {
+      const { reason } = req.body;
+      if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+        return res.status(400).json({ message: "Moderation reason is required" });
+      }
+
+      // Get the bar first to find the user
+      const bar = await storage.getBarById(req.params.id);
+      if (!bar) {
+        return res.status(404).json({ message: "Bar not found" });
+      }
+
+      const userId = bar.userId;
+      const barContent = bar.content.length > 50 ? bar.content.substring(0, 50) + "..." : bar.content;
+
+      // Delete the bar
+      const success = await storage.deleteBarAdmin(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Failed to remove bar" });
+      }
+
+      // Create notification for the user (barId omitted since bar was deleted)
+      await storage.createNotification({
+        userId,
+        type: "moderation",
+        actorId: req.user!.id,
+        message: `Your post "${barContent}" was removed due to moderation. Reason: ${reason.trim()}`,
+      });
+
+      res.json({ message: "Bar moderated and user notified" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.delete("/api/admin/users/:id", isAdmin, async (req, res) => {
     try {
       if (req.params.id === req.user!.id) {
