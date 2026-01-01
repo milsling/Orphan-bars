@@ -520,7 +520,7 @@ export default function Auth() {
           <Link href="/">
             <div className="flex items-center justify-center gap-2 mb-4 cursor-pointer hover:opacity-80 transition-opacity">
               <BookOpen className="text-primary h-10 w-10" />
-              <span className="font-display font-black text-3xl tracking-tighter">ORPHAN BARS</span>
+              <span className="font-logo text-3xl">ORPHAN BARS</span>
             </div>
           </Link>
           <p className="text-muted-foreground max-w-sm mx-auto">
