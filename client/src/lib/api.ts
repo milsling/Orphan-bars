@@ -14,10 +14,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+// Helper to make fetch requests with credentials included
+function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  return fetch(url, {
+    ...options,
+    credentials: 'include',
+  });
+}
+
 export const api = {
   // Auth
   sendVerificationCode: async (email: string): Promise<{ message: string }> => {
-    const response = await fetch('/api/auth/send-code', {
+    const response = await apiFetch('/api/auth/send-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -26,7 +34,7 @@ export const api = {
   },
 
   verifyCode: async (email: string, code: string): Promise<{ verified: boolean }> => {
-    const response = await fetch('/api/auth/verify-code', {
+    const response = await apiFetch('/api/auth/verify-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, code }),
@@ -35,7 +43,7 @@ export const api = {
   },
 
   signup: async (username: string, password: string, email: string, code: string): Promise<User> => {
-    const response = await fetch('/api/auth/signup', {
+    const response = await apiFetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password, email, code }),
@@ -44,7 +52,7 @@ export const api = {
   },
 
   signupSimple: async (username: string, password: string): Promise<User> => {
-    const response = await fetch('/api/auth/signup-simple', {
+    const response = await apiFetch('/api/auth/signup-simple', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -53,7 +61,7 @@ export const api = {
   },
 
   login: async (username: string, password: string): Promise<User> => {
-    const response = await fetch('/api/auth/login', {
+    const response = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -62,14 +70,14 @@ export const api = {
   },
 
   logout: async (): Promise<{ message: string }> => {
-    const response = await fetch('/api/auth/logout', {
+    const response = await apiFetch('/api/auth/logout', {
       method: 'POST',
     });
     return handleResponse<{ message: string }>(response);
   },
 
   forgotPassword: async (email: string): Promise<{ message: string }> => {
-    const response = await fetch('/api/auth/forgot-password', {
+    const response = await apiFetch('/api/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -78,7 +86,7 @@ export const api = {
   },
 
   resetPassword: async (email: string, code: string, newPassword: string): Promise<{ message: string; username?: string }> => {
-    const response = await fetch('/api/auth/reset-password', {
+    const response = await apiFetch('/api/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, code, newPassword }),
@@ -87,23 +95,23 @@ export const api = {
   },
 
   getCurrentUser: async (): Promise<User> => {
-    const response = await fetch('/api/auth/user');
+    const response = await apiFetch('/api/auth/user');
     return handleResponse<User>(response);
   },
 
   // Bars
   getBars: async (limit = 50): Promise<BarWithUser[]> => {
-    const response = await fetch(`/api/bars?limit=${limit}`);
+    const response = await apiFetch(`/api/bars?limit=${limit}`);
     return handleResponse<BarWithUser[]>(response);
   },
 
   getBar: async (id: string): Promise<BarWithUser> => {
-    const response = await fetch(`/api/bars/${id}`);
+    const response = await apiFetch(`/api/bars/${id}`);
     return handleResponse<BarWithUser>(response);
   },
 
   getBarsByUser: async (userId: string): Promise<BarWithUser[]> => {
-    const response = await fetch(`/api/bars/user/${userId}`);
+    const response = await apiFetch(`/api/bars/user/${userId}`);
     return handleResponse<BarWithUser[]>(response);
   },
 
@@ -113,7 +121,7 @@ export const api = {
     category: string;
     tags: string[];
   }): Promise<BarWithUser> => {
-    const response = await fetch('/api/bars', {
+    const response = await apiFetch('/api/bars', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -122,7 +130,7 @@ export const api = {
   },
 
   deleteBar: async (barId: string): Promise<{ message: string }> => {
-    const response = await fetch(`/api/bars/${barId}`, {
+    const response = await apiFetch(`/api/bars/${barId}`, {
       method: 'DELETE',
     });
     return handleResponse<{ message: string }>(response);
@@ -134,7 +142,7 @@ export const api = {
     category?: string;
     tags?: string[];
   }): Promise<BarWithUser> => {
-    const response = await fetch(`/api/bars/${barId}`, {
+    const response = await apiFetch(`/api/bars/${barId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -144,7 +152,7 @@ export const api = {
 
   // Users
   getUser: async (username: string): Promise<User> => {
-    const response = await fetch(`/api/users/${username}`);
+    const response = await apiFetch(`/api/users/${username}`);
     return handleResponse<User>(response);
   },
 
@@ -153,7 +161,7 @@ export const api = {
     location?: string;
     avatarUrl?: string;
   }): Promise<User> => {
-    const response = await fetch('/api/users/me', {
+    const response = await apiFetch('/api/users/me', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -162,7 +170,7 @@ export const api = {
   },
 
   requestUploadUrl: async (file: { name: string; size: number; type: string }): Promise<{ uploadURL: string; objectPath: string }> => {
-    const response = await fetch('/api/uploads/request-url', {
+    const response = await apiFetch('/api/uploads/request-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -176,23 +184,23 @@ export const api = {
 
   // Likes
   toggleLike: async (barId: string): Promise<{ liked: boolean; count: number }> => {
-    const response = await fetch(`/api/bars/${barId}/like`, { method: 'POST' });
+    const response = await apiFetch(`/api/bars/${barId}/like`, { method: 'POST' });
     return handleResponse<{ liked: boolean; count: number }>(response);
   },
 
   getLikes: async (barId: string): Promise<{ count: number; liked: boolean }> => {
-    const response = await fetch(`/api/bars/${barId}/likes`);
+    const response = await apiFetch(`/api/bars/${barId}/likes`);
     return handleResponse<{ count: number; liked: boolean }>(response);
   },
 
   // Comments
   getComments: async (barId: string): Promise<any[]> => {
-    const response = await fetch(`/api/bars/${barId}/comments`);
+    const response = await apiFetch(`/api/bars/${barId}/comments`);
     return handleResponse<any[]>(response);
   },
 
   createComment: async (barId: string, content: string): Promise<any> => {
-    const response = await fetch(`/api/bars/${barId}/comments`, {
+    const response = await apiFetch(`/api/bars/${barId}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
@@ -201,35 +209,35 @@ export const api = {
   },
 
   deleteComment: async (commentId: string): Promise<{ message: string }> => {
-    const response = await fetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+    const response = await apiFetch(`/api/comments/${commentId}`, { method: 'DELETE' });
     return handleResponse<{ message: string }>(response);
   },
 
   // Follow
   followUser: async (userId: string): Promise<{ followed: boolean }> => {
-    const response = await fetch(`/api/users/${userId}/follow`, { method: 'POST' });
+    const response = await apiFetch(`/api/users/${userId}/follow`, { method: 'POST' });
     return handleResponse<{ followed: boolean }>(response);
   },
 
   unfollowUser: async (userId: string): Promise<{ unfollowed: boolean }> => {
-    const response = await fetch(`/api/users/${userId}/unfollow`, { method: 'POST' });
+    const response = await apiFetch(`/api/users/${userId}/unfollow`, { method: 'POST' });
     return handleResponse<{ unfollowed: boolean }>(response);
   },
 
   isFollowing: async (userId: string): Promise<boolean> => {
-    const response = await fetch(`/api/users/${userId}/follow-status`);
+    const response = await apiFetch(`/api/users/${userId}/follow-status`);
     const data = await handleResponse<{ isFollowing: boolean }>(response);
     return data.isFollowing;
   },
 
   getUserStats: async (userId: string): Promise<{ barsCount: number; followersCount: number; followingCount: number }> => {
-    const response = await fetch(`/api/users/${userId}/stats`);
+    const response = await apiFetch(`/api/users/${userId}/stats`);
     return handleResponse<{ barsCount: number; followersCount: number; followingCount: number }>(response);
   },
 
   // Username
   changeUsername: async (username: string): Promise<User> => {
-    const response = await fetch('/api/users/me/username', {
+    const response = await apiFetch('/api/users/me/username', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
@@ -239,7 +247,7 @@ export const api = {
 
   // Password
   changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
-    const response = await fetch('/api/users/me/password', {
+    const response = await apiFetch('/api/users/me/password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword, newPassword }),
@@ -249,26 +257,26 @@ export const api = {
 
   // Admin
   getAllUsers: async (): Promise<User[]> => {
-    const response = await fetch('/api/admin/users');
+    const response = await apiFetch('/api/admin/users');
     return handleResponse<User[]>(response);
   },
 
   adminDeleteBar: async (barId: string): Promise<{ message: string }> => {
-    const response = await fetch(`/api/admin/bars/${barId}`, {
+    const response = await apiFetch(`/api/admin/bars/${barId}`, {
       method: 'DELETE',
     });
     return handleResponse<{ message: string }>(response);
   },
 
   adminDeleteAllBars: async (): Promise<{ message: string }> => {
-    const response = await fetch('/api/admin/bars', {
+    const response = await apiFetch('/api/admin/bars', {
       method: 'DELETE',
     });
     return handleResponse<{ message: string }>(response);
   },
 
   adminDeleteUser: async (userId: string): Promise<{ message: string }> => {
-    const response = await fetch(`/api/admin/users/${userId}`, {
+    const response = await apiFetch(`/api/admin/users/${userId}`, {
       method: 'DELETE',
     });
     return handleResponse<{ message: string }>(response);
@@ -276,22 +284,22 @@ export const api = {
 
   // Notifications
   getNotifications: async (limit = 20): Promise<any[]> => {
-    const response = await fetch(`/api/notifications?limit=${limit}`);
+    const response = await apiFetch(`/api/notifications?limit=${limit}`);
     return handleResponse<any[]>(response);
   },
 
   getUnreadNotificationCount: async (): Promise<{ count: number }> => {
-    const response = await fetch('/api/notifications/unread-count');
+    const response = await apiFetch('/api/notifications/unread-count');
     return handleResponse<{ count: number }>(response);
   },
 
   markNotificationRead: async (id: string): Promise<{ success: boolean }> => {
-    const response = await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+    const response = await apiFetch(`/api/notifications/${id}/read`, { method: 'POST' });
     return handleResponse<{ success: boolean }>(response);
   },
 
   markAllNotificationsRead: async (): Promise<{ success: boolean }> => {
-    const response = await fetch('/api/notifications/read-all', { method: 'POST' });
+    const response = await apiFetch('/api/notifications/read-all', { method: 'POST' });
     return handleResponse<{ success: boolean }>(response);
   },
 };
