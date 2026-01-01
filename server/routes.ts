@@ -227,14 +227,19 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Email is required" });
       }
 
-      const user = await storage.getUserByEmail(email);
+      // Case-insensitive email lookup
+      const normalizedEmail = email.toLowerCase().trim();
+      const allUsers = await storage.getAllUsers();
+      const user = allUsers.find(u => u.email.toLowerCase() === normalizedEmail);
+      
       if (!user) {
         // Don't reveal if email exists
         return res.json({ message: "If an account exists with this email, a reset code has been sent" });
       }
 
       const code = generateVerificationCode();
-      await storage.createPasswordResetCode(email, code);
+      // Store with the user's actual email for consistency
+      await storage.createPasswordResetCode(user.email, code);
 
       const sent = await sendPasswordResetEmail(email, code);
       if (!sent) {
@@ -262,22 +267,44 @@ export async function registerRoutes(
         return res.status(429).json({ message: "Too many attempts. Please try again later." });
       }
 
-      const isValid = await storage.verifyPasswordResetCode(email, code);
+      // Try to verify with normalized email first, then original
+      const normalizedEmailForVerify = email.toLowerCase().trim();
+      let isValid = await storage.verifyPasswordResetCode(email, code);
+      if (!isValid) {
+        // Try with the stored user's email (case may differ)
+        const allUsersForReset = await storage.getAllUsers();
+        const matchingUser = allUsersForReset.find(u => u.email.toLowerCase() === normalizedEmailForVerify);
+        if (matchingUser) {
+          isValid = await storage.verifyPasswordResetCode(matchingUser.email, code);
+        }
+      }
       if (!isValid) {
         return res.status(400).json({ message: "Invalid or expired reset code" });
       }
 
-      const user = await storage.getUserByEmail(email);
+      // Look up by email (case-insensitive)
+      const normalizedEmail = email.toLowerCase().trim();
+      const allUsers = await storage.getAllUsers();
+      const user = allUsers.find(u => u.email.toLowerCase() === normalizedEmail);
+      
       if (!user) {
         return res.status(400).json({ message: "User not found" });
       }
 
       const hashedPassword = await hashPassword(newPassword);
-      await storage.updateUser(user.id, { password: hashedPassword });
+      const updatedUser = await storage.updateUser(user.id, { password: hashedPassword });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+      
       await storage.deletePasswordResetCodes(email);
+      // Also delete with normalized email in case stored differently
+      await storage.deletePasswordResetCodes(normalizedEmail);
       clearRateLimit(passwordResetAttempts, email);
 
-      res.json({ message: "Password reset successfully" });
+      console.log(`Password reset successfully for user: ${user.username} (${user.email})`);
+      res.json({ message: "Password reset successfully", username: user.username });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

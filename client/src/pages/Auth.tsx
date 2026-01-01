@@ -173,10 +173,12 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      await api.resetPassword(resetEmail, resetCode, newPassword);
+      const result = await api.resetPassword(resetEmail, resetCode, newPassword);
       toast({
         title: "Password reset!",
-        description: "You can now log in with your new password.",
+        description: result.username 
+          ? `You can now log in as "${result.username}" with your new password.`
+          : "You can now log in with your new password.",
       });
       resetForgotPassword();
     } catch (error: any) {

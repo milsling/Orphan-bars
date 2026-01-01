@@ -77,13 +77,13 @@ export const api = {
     return handleResponse<{ message: string }>(response);
   },
 
-  resetPassword: async (email: string, code: string, newPassword: string): Promise<{ message: string }> => {
+  resetPassword: async (email: string, code: string, newPassword: string): Promise<{ message: string; username?: string }> => {
     const response = await fetch('/api/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, code, newPassword }),
     });
-    return handleResponse<{ message: string }>(response);
+    return handleResponse<{ message: string; username?: string }>(response);
   },
 
   getCurrentUser: async (): Promise<User> => {
