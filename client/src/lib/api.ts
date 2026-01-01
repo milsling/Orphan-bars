@@ -282,6 +282,33 @@ export const api = {
     return handleResponse<{ message: string }>(response);
   },
 
+  adminToggleAdmin: async (userId: string, isAdmin: boolean): Promise<User> => {
+    const response = await apiFetch(`/api/admin/users/${userId}/admin`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isAdmin }),
+    });
+    return handleResponse<User>(response);
+  },
+
+  adminToggleVerified: async (userId: string, emailVerified: boolean): Promise<User> => {
+    const response = await apiFetch(`/api/admin/users/${userId}/verify`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailVerified }),
+    });
+    return handleResponse<User>(response);
+  },
+
+  adminChangeMembership: async (userId: string, membershipTier: string): Promise<User> => {
+    const response = await apiFetch(`/api/admin/users/${userId}/membership`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ membershipTier }),
+    });
+    return handleResponse<User>(response);
+  },
+
   // Notifications
   getNotifications: async (limit = 20): Promise<any[]> => {
     const response = await apiFetch(`/api/notifications?limit=${limit}`);

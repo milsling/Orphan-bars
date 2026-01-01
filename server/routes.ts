@@ -773,5 +773,63 @@ export async function registerRoutes(
     }
   });
 
+  // Toggle admin status
+  app.patch("/api/admin/users/:id/admin", isAdmin, async (req, res) => {
+    try {
+      if (req.params.id === req.user!.id) {
+        return res.status(400).json({ message: "Cannot change your own admin status" });
+      }
+      const { isAdmin: newAdminStatus } = req.body;
+      if (typeof newAdminStatus !== "boolean") {
+        return res.status(400).json({ message: "isAdmin must be a boolean" });
+      }
+      const user = await storage.updateUser(req.params.id, { isAdmin: newAdminStatus });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Toggle email verified status
+  app.patch("/api/admin/users/:id/verify", isAdmin, async (req, res) => {
+    try {
+      const { emailVerified } = req.body;
+      if (typeof emailVerified !== "boolean") {
+        return res.status(400).json({ message: "emailVerified must be a boolean" });
+      }
+      const user = await storage.updateUser(req.params.id, { emailVerified });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Change membership tier
+  app.patch("/api/admin/users/:id/membership", isAdmin, async (req, res) => {
+    try {
+      const { membershipTier } = req.body;
+      const validTiers = ["free", "basic", "premium"];
+      if (!validTiers.includes(membershipTier)) {
+        return res.status(400).json({ message: "Invalid membership tier" });
+      }
+      const user = await storage.updateUser(req.params.id, { membershipTier });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
