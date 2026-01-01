@@ -9,20 +9,21 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { sendVerificationEmail, sendPasswordResetEmail, generateVerificationCode } from "./email";
 
 const verificationAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;
 
-function checkRateLimit(email: string): boolean {
+function checkRateLimit(attemptsMap: Map<string, { count: number; lastAttempt: number }>, key: string): boolean {
   const now = Date.now();
-  const attempts = verificationAttempts.get(email);
+  const attempts = attemptsMap.get(key);
   
   if (!attempts) {
-    verificationAttempts.set(email, { count: 1, lastAttempt: now });
+    attemptsMap.set(key, { count: 1, lastAttempt: now });
     return true;
   }
   
   if (now - attempts.lastAttempt > LOCKOUT_MS) {
-    verificationAttempts.set(email, { count: 1, lastAttempt: now });
+    attemptsMap.set(key, { count: 1, lastAttempt: now });
     return true;
   }
   
@@ -35,8 +36,8 @@ function checkRateLimit(email: string): boolean {
   return true;
 }
 
-function clearRateLimit(email: string): void {
-  verificationAttempts.delete(email);
+function clearRateLimit(attemptsMap: Map<string, { count: number; lastAttempt: number }>, key: string): void {
+  attemptsMap.delete(key);
 }
 
 export async function registerRoutes(
@@ -82,7 +83,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Email and code are required" });
       }
 
-      if (!checkRateLimit(email)) {
+      if (!checkRateLimit(verificationAttempts, email)) {
         return res.status(429).json({ message: "Too many attempts. Please try again later." });
       }
 
@@ -91,7 +92,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid or expired code" });
       }
 
-      clearRateLimit(email);
+      clearRateLimit(verificationAttempts, email);
       res.json({ verified: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -245,6 +246,10 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
 
+      if (!checkRateLimit(passwordResetAttempts, email)) {
+        return res.status(429).json({ message: "Too many attempts. Please try again later." });
+      }
+
       const isValid = await storage.verifyPasswordResetCode(email, code);
       if (!isValid) {
         return res.status(400).json({ message: "Invalid or expired reset code" });
@@ -258,6 +263,7 @@ export async function registerRoutes(
       const hashedPassword = await hashPassword(newPassword);
       await storage.updateUser(user.id, { password: hashedPassword });
       await storage.deletePasswordResetCodes(email);
+      clearRateLimit(passwordResetAttempts, email);
 
       res.json({ message: "Password reset successfully" });
     } catch (error: any) {

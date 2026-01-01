@@ -5,13 +5,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { BookOpen, ArrowLeft, Mail, CheckCircle, KeyRound } from "lucide-react";
 import { Link } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { api } from "@/lib/api";
 
 type SignupStep = "email" | "verify" | "details";
+type ResetStep = "email" | "code" | "password";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
@@ -24,6 +26,13 @@ export default function Auth() {
   const [code, setCode] = useState("");
   const [signupStep, setSignupStep] = useState<SignupStep>("email");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [resetStep, setResetStep] = useState<ResetStep>("email");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +136,215 @@ export default function Auth() {
     setCode("");
     setUsername("");
     setPassword("");
+  };
+
+  const resetForgotPassword = () => {
+    setShowForgotPassword(false);
+    setResetStep("email");
+    setResetEmail("");
+    setResetCode("");
+    setNewPassword("");
+  };
+
+  const handleForgotPasswordSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      await api.forgotPassword(resetEmail);
+      toast({
+        title: "Code sent!",
+        description: "If an account exists with this email, a reset code has been sent.",
+      });
+      setResetStep("code");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      await api.resetPassword(resetEmail, resetCode, newPassword);
+      toast({
+        title: "Password reset!",
+        description: "You can now log in with your new password.",
+      });
+      resetForgotPassword();
+    } catch (error: any) {
+      toast({
+        title: "Reset failed",
+        description: error.message || "Invalid or expired code",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderForgotPasswordContent = () => {
+    switch (resetStep) {
+      case "email":
+        return (
+          <form onSubmit={handleForgotPasswordSendCode}>
+            <CardHeader>
+              <div className="flex items-center gap-2 mb-2">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={resetForgotPassword}
+                  data-testid="button-back-login"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <CardTitle>Reset Password</CardTitle>
+              </div>
+              <CardDescription>Enter your email to receive a reset code.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input 
+                  id="reset-email" 
+                  data-testid="input-reset-email"
+                  type="email"
+                  placeholder="you@example.com" 
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                  className="bg-secondary/30 border-border/50"
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                type="submit" 
+                data-testid="button-send-reset-code"
+                className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={isLoading}
+              >
+                {isLoading ? "Sending..." : "Send Reset Code"}
+              </Button>
+            </CardFooter>
+          </form>
+        );
+
+      case "code":
+        return (
+          <form onSubmit={(e) => { e.preventDefault(); setResetStep("password"); }}>
+            <CardHeader>
+              <div className="flex items-center gap-2 mb-2">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => setResetStep("email")}
+                  data-testid="button-back-reset-email"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <CardTitle>Enter Code</CardTitle>
+              </div>
+              <CardDescription className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Code sent to {resetEmail}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Reset Code</Label>
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={resetCode}
+                    onChange={(value) => setResetCode(value)}
+                    data-testid="input-reset-code"
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex-col gap-2">
+              <Button 
+                type="submit" 
+                data-testid="button-verify-reset-code"
+                className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={resetCode.length !== 6}
+              >
+                Continue
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-sm text-muted-foreground"
+                onClick={handleForgotPasswordSendCode}
+                disabled={isLoading}
+                data-testid="button-resend-reset-code"
+              >
+                Resend code
+              </Button>
+            </CardFooter>
+          </form>
+        );
+
+      case "password":
+        return (
+          <form onSubmit={handleResetPassword}>
+            <CardHeader>
+              <div className="flex items-center gap-2 mb-2">
+                <KeyRound className="h-5 w-5 text-primary" />
+                <CardTitle>New Password</CardTitle>
+              </div>
+              <CardDescription>Choose a new password for your account.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input 
+                  id="new-password" 
+                  data-testid="input-new-password"
+                  type="password" 
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="bg-secondary/30 border-border/50"
+                />
+                <p className="text-xs text-muted-foreground">At least 6 characters</p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                type="submit" 
+                data-testid="button-reset-password"
+                className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={isLoading}
+              >
+                {isLoading ? "Resetting..." : "Reset Password"}
+              </Button>
+            </CardFooter>
+          </form>
+        );
+    }
   };
 
   const renderSignupContent = () => {
@@ -328,48 +546,61 @@ export default function Auth() {
           </TabsList>
           
           <TabsContent value="login">
-            <form onSubmit={handleLogin}>
-              <CardHeader>
-                <CardTitle>Welcome Back</CardTitle>
-                <CardDescription>Enter your credentials to access your rhyme book.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-username">Username</Label>
-                  <Input 
-                    id="login-username" 
-                    data-testid="input-login-username"
-                    placeholder="SpitFire_99"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required 
-                    className="bg-secondary/30 border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input 
-                    id="login-password" 
-                    data-testid="input-login-password"
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required 
-                    className="bg-secondary/30 border-border/50"
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  type="submit" 
-                  data-testid="button-login"
-                  className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Logging in..." : "Login"}
-                </Button>
-              </CardFooter>
-            </form>
+            {showForgotPassword ? (
+              renderForgotPasswordContent()
+            ) : (
+              <form onSubmit={handleLogin}>
+                <CardHeader>
+                  <CardTitle>Welcome Back</CardTitle>
+                  <CardDescription>Enter your credentials to access your rhyme book.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-username">Username</Label>
+                    <Input 
+                      id="login-username" 
+                      data-testid="input-login-username"
+                      placeholder="SpitFire_99"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required 
+                      className="bg-secondary/30 border-border/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input 
+                      id="login-password" 
+                      data-testid="input-login-password"
+                      type="password" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required 
+                      className="bg-secondary/30 border-border/50"
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter className="flex-col gap-2">
+                  <Button 
+                    type="submit" 
+                    data-testid="button-login"
+                    className="w-full font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Logging in..." : "Login"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-sm text-muted-foreground"
+                    onClick={() => setShowForgotPassword(true)}
+                    data-testid="button-forgot-password"
+                  >
+                    Forgot password?
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
           </TabsContent>
           
           <TabsContent value="signup">
