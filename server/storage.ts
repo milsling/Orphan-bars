@@ -13,6 +13,7 @@ export interface IStorage {
   // Bar methods
   createBar(bar: InsertBar): Promise<Bar>;
   getBars(limit?: number): Promise<Array<Bar & { user: User }>>;
+  getBarById(id: string): Promise<(Bar & { user: User }) | undefined>;
   getBarsByUser(userId: string): Promise<Bar[]>;
   updateBar(id: string, userId: string, updates: Partial<Pick<Bar, 'content' | 'explanation' | 'category' | 'tags'>>): Promise<Bar | undefined>;
   deleteBar(id: string, userId: string): Promise<boolean>;
@@ -126,6 +127,20 @@ export class DatabaseStorage implements IStorage {
       ...row.bar,
       user: row.user as any,
     }));
+  }
+
+  async getBarById(id: string): Promise<(Bar & { user: User }) | undefined> {
+    const [result] = await db
+      .select({
+        bar: bars,
+        user: users
+      })
+      .from(bars)
+      .leftJoin(users, eq(bars.userId, users.id))
+      .where(eq(bars.id, id));
+    
+    if (!result) return undefined;
+    return { ...result.bar, user: result.user as User };
   }
 
   async getBarsByUser(userId: string): Promise<Bar[]> {

@@ -246,4 +246,25 @@ export const api = {
     });
     return handleResponse<{ message: string }>(response);
   },
+
+  // Notifications
+  getNotifications: async (limit = 20): Promise<any[]> => {
+    const response = await fetch(`/api/notifications?limit=${limit}`);
+    return handleResponse<any[]>(response);
+  },
+
+  getUnreadNotificationCount: async (): Promise<{ count: number }> => {
+    const response = await fetch('/api/notifications/unread-count');
+    return handleResponse<{ count: number }>(response);
+  },
+
+  markNotificationRead: async (id: string): Promise<{ success: boolean }> => {
+    const response = await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+    return handleResponse<{ success: boolean }>(response);
+  },
+
+  markAllNotificationsRead: async (): Promise<{ success: boolean }> => {
+    const response = await fetch('/api/notifications/read-all', { method: 'POST' });
+    return handleResponse<{ success: boolean }>(response);
+  },
 };

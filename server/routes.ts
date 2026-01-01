@@ -389,8 +389,7 @@ export async function registerRoutes(
       
       // Send notification if liked (not unliked) and not own bar
       if (liked) {
-        const allBars = await storage.getBars(1000);
-        const bar = allBars.find(b => b.id === req.params.id);
+        const bar = await storage.getBarById(req.params.id);
         if (bar && bar.userId !== req.user!.id) {
           await storage.createNotification({
             userId: bar.userId,
@@ -441,8 +440,7 @@ export async function registerRoutes(
       });
       
       // Send notification to bar owner (if not commenting on own bar)
-      const allBars = await storage.getBars(1000);
-      const bar = allBars.find(b => b.id === req.params.id);
+      const bar = await storage.getBarById(req.params.id);
       if (bar && bar.userId !== req.user!.id) {
         await storage.createNotification({
           userId: bar.userId,

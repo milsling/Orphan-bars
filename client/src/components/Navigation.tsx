@@ -1,9 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, PlusSquare, BookOpen, LogIn, Shield } from "lucide-react";
+import { Home, User, PlusSquare, BookOpen, LogIn, Shield, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBars } from "@/context/BarContext";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -47,6 +48,8 @@ export default function Navigation() {
               </div>
             </Link>
           ))}
+          
+          {currentUser && <NotificationBell />}
           
           <ThemeToggle />
           
