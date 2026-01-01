@@ -6,7 +6,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
   try {
     const { error } = await resend.emails.send({
-      from: 'Orphan Bars <onboarding@resend.dev>',
+      from: 'Orphan Bars <noreply@orphanbars.com>',
       to: email,
       subject: 'Verify your Orphan Bars account',
       html: `
