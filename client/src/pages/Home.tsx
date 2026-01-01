@@ -2,8 +2,9 @@ import { useState, useMemo } from "react";
 import Navigation from "@/components/Navigation";
 import BarCard from "@/components/BarCard";
 import CategoryFilter from "@/components/CategoryFilter";
-import { BookOpen, Flame, Trophy, Grid3X3 } from "lucide-react";
+import { Clock, Flame, Trophy, Grid3X3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import iconUrl from "@/assets/icon.png";
 import { useBars } from "@/context/BarContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -43,7 +44,7 @@ export default function Home() {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <BookOpen className="text-primary h-6 w-6" />
+          <img src={iconUrl} alt="" className="h-7 w-7" />
           <span className="font-logo text-xl">ORPHAN BARS</span>
         </div>
         <ThemeToggle />
@@ -67,7 +68,7 @@ export default function Home() {
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FeedTab)} className="w-full">
                 <TabsList className="w-full grid grid-cols-4 bg-secondary/50">
                   <TabsTrigger value="latest" className="gap-1.5 text-xs sm:text-sm" data-testid="tab-latest">
-                    <BookOpen className="h-3.5 w-3.5" />
+                    <Clock className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Latest</span>
                   </TabsTrigger>
                   <TabsTrigger value="top" className="gap-1.5 text-xs sm:text-sm" data-testid="tab-top">
