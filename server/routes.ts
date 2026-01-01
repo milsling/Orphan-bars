@@ -6,7 +6,7 @@ import passport from "passport";
 import { insertUserSchema, insertBarSchema, updateBarSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
-import { sendVerificationEmail, generateVerificationCode } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail, generateVerificationCode } from "./email";
 
 const verificationAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_ATTEMPTS = 5;
@@ -204,6 +204,65 @@ export async function registerRoutes(
       }
       res.json({ message: "Logged out successfully" });
     });
+  });
+
+  // Password reset routes
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists
+        return res.json({ message: "If an account exists with this email, a reset code has been sent" });
+      }
+
+      const code = generateVerificationCode();
+      await storage.createPasswordResetCode(email, code);
+
+      const sent = await sendPasswordResetEmail(email, code);
+      if (!sent) {
+        return res.status(500).json({ message: "Failed to send reset email" });
+      }
+
+      res.json({ message: "If an account exists with this email, a reset code has been sent" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ message: "Email, code, and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      const isValid = await storage.verifyPasswordResetCode(email, code);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(400).json({ message: "User not found" });
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashedPassword });
+      await storage.deletePasswordResetCodes(email);
+
+      res.json({ message: "Password reset successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.get("/api/auth/user", (req, res) => {
