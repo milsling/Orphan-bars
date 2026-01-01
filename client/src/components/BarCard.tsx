@@ -3,6 +3,7 @@ import type { BarWithUser } from "@shared/schema";
 import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X } from "lucide-react";
 import { shareContent, getBarShareData } from "@/lib/share";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -162,15 +163,19 @@ export default function BarCard({ bar }: BarCardProps) {
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden hover:border-primary/30 transition-colors duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border border-white/10">
-                <AvatarImage src={bar.user.avatarUrl || undefined} alt={bar.user.username} />
-                <AvatarFallback>{bar.user.username[0].toUpperCase()}</AvatarFallback>
-              </Avatar>
+              <Link href={`/u/${bar.user.username}`}>
+                <Avatar className="h-10 w-10 border border-white/10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                  <AvatarImage src={bar.user.avatarUrl || undefined} alt={bar.user.username} />
+                  <AvatarFallback>{bar.user.username[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </Link>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1">
-                  <span className="font-bold text-sm hover:text-primary cursor-pointer" data-testid={`text-author-${bar.id}`}>
-                    @{bar.user.username}
-                  </span>
+                  <Link href={`/u/${bar.user.username}`}>
+                    <span className="font-bold text-sm hover:text-primary cursor-pointer transition-colors" data-testid={`text-author-${bar.id}`}>
+                      @{bar.user.username}
+                    </span>
+                  </Link>
                   {bar.user.membershipTier !== "free" && (
                     <span className="text-[10px] text-primary">✓</span>
                   )}
