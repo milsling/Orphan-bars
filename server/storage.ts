@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type InsertComment } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, follows, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type InsertComment } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql } from "drizzle-orm";
 
@@ -43,6 +43,14 @@ export interface IStorage {
   getComments(barId: string): Promise<Array<Comment & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> }>>;
   deleteComment(id: string, userId: string): Promise<boolean>;
   getCommentCount(barId: string): Promise<number>;
+
+  // Follow methods
+  followUser(followerId: string, followingId: string): Promise<boolean>;
+  unfollowUser(followerId: string, followingId: string): Promise<boolean>;
+  isFollowing(followerId: string, followingId: string): Promise<boolean>;
+  getFollowersCount(userId: string): Promise<number>;
+  getFollowingCount(userId: string): Promise<number>;
+  getBarsCount(userId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -250,6 +258,39 @@ export class DatabaseStorage implements IStorage {
 
   async getCommentCount(barId: string): Promise<number> {
     const [result] = await db.select({ count: count() }).from(comments).where(eq(comments.barId, barId));
+    return result?.count || 0;
+  }
+
+  async followUser(followerId: string, followingId: string): Promise<boolean> {
+    if (followerId === followingId) return false;
+    const [existing] = await db.select().from(follows).where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+    if (existing) return false;
+    await db.insert(follows).values({ followerId, followingId });
+    return true;
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<boolean> {
+    const result = await db.delete(follows).where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId))).returning();
+    return result.length > 0;
+  }
+
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const [existing] = await db.select().from(follows).where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+    return !!existing;
+  }
+
+  async getFollowersCount(userId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(follows).where(eq(follows.followingId, userId));
+    return result?.count || 0;
+  }
+
+  async getFollowingCount(userId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(follows).where(eq(follows.followerId, userId));
+    return result?.count || 0;
+  }
+
+  async getBarsCount(userId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(bars).where(eq(bars.userId, userId));
     return result?.count || 0;
   }
 }

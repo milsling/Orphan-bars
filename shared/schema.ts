@@ -83,6 +83,18 @@ export const commentsRelations = relations(comments, ({ one }) => ({
   bar: one(bars, { fields: [comments.barId], references: [bars.id] }),
 }));
 
+export const follows = pgTable("follows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  followerId: varchar("follower_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  followingId: varchar("following_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(users, { fields: [follows.followerId], references: [users.id] }),
+  following: one(users, { fields: [follows.followingId], references: [users.id] }),
+}));
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   membershipTier: true,
@@ -113,6 +125,7 @@ export type Bar = typeof bars.$inferSelect;
 export type Like = typeof likes.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Follow = typeof follows.$inferSelect;
 
 export type BarWithUser = Bar & {
   user: {
