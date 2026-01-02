@@ -509,6 +509,45 @@ export async function registerRoutes(
     }
   });
 
+  // Comment like routes
+  app.post("/api/comments/:id/like", isAuthenticated, async (req, res) => {
+    try {
+      const liked = await storage.toggleCommentLike(req.user!.id, req.params.id);
+      const count = await storage.getCommentLikeCount(req.params.id);
+      
+      // Send notification to comment owner (if not liking own comment)
+      if (liked) {
+        const comment = await storage.getCommentById(req.params.id);
+        if (comment && comment.userId !== req.user!.id) {
+          await storage.createNotification({
+            userId: comment.userId,
+            type: "comment_like",
+            actorId: req.user!.id,
+            barId: comment.barId,
+            commentId: comment.id,
+            message: `@${req.user!.username} liked your comment`
+          });
+        }
+      }
+      
+      res.json({ liked, count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/comments/:id/likes", async (req, res) => {
+    try {
+      const count = await storage.getCommentLikeCount(req.params.id);
+      const liked = req.isAuthenticated() && req.user?.id
+        ? await storage.hasUserLikedComment(req.user.id, req.params.id)
+        : false;
+      res.json({ count, liked });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Follow routes
   app.post("/api/users/:userId/follow", isAuthenticated, async (req, res) => {
     try {

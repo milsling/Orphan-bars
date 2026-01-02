@@ -27,6 +27,78 @@ interface BarCardProps {
   bar: BarWithUser;
 }
 
+interface CommentItemProps {
+  comment: any;
+  currentUserId?: string;
+  onDelete: () => void;
+}
+
+function CommentItem({ comment, currentUserId, onDelete }: CommentItemProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const { data: likeData } = useQuery({
+    queryKey: ['commentLikes', comment.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/comments/${comment.id}/likes`, { credentials: 'include' });
+      return res.json();
+    },
+    initialData: { count: comment.likeCount || 0, liked: false },
+  });
+  
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/comments/${comment.id}/like`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to like comment');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commentLikes', comment.id] });
+    },
+    onError: () => {
+      toast({ title: "Login required", description: "You need to be logged in to like comments", variant: "destructive" });
+    },
+  });
+  
+  return (
+    <div className="flex gap-2 p-2 bg-secondary/20 rounded-md">
+      <Avatar className="h-6 w-6">
+        <AvatarImage src={comment.user?.avatarUrl || undefined} />
+        <AvatarFallback className="text-xs">{comment.user?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold">@{comment.user?.username}</span>
+          <span className="text-[10px] text-muted-foreground">{formatTimestamp(comment.createdAt)}</span>
+        </div>
+        <p className="text-sm text-foreground/80">{comment.content}</p>
+        <button
+          onClick={() => currentUserId ? likeMutation.mutate() : toast({ title: "Login required", description: "You need to be logged in to like comments", variant: "destructive" })}
+          className={`flex items-center gap-1 mt-1 text-[10px] transition-colors ${likeData?.liked ? 'text-red-400' : 'text-muted-foreground hover:text-red-400'}`}
+          disabled={likeMutation.isPending}
+          data-testid={`button-like-comment-${comment.id}`}
+        >
+          <Heart className={`h-3 w-3 ${likeData?.liked ? 'fill-current' : ''}`} />
+          <span>{likeData?.count || 0}</span>
+        </button>
+      </div>
+      {currentUserId === comment.userId && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+          onClick={onDelete}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
 const CATEGORIES = ["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"];
 
 export default function BarCard({ bar }: BarCardProps) {
@@ -392,29 +464,12 @@ export default function BarCard({ bar }: BarCardProps) {
                     <ScrollArea className="max-h-48">
                       <div className="space-y-2">
                         {commentsData.map((comment: any) => (
-                          <div key={comment.id} className="flex gap-2 p-2 bg-secondary/20 rounded-md">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={comment.user?.avatarUrl || undefined} />
-                              <AvatarFallback className="text-xs">{comment.user?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold">@{comment.user?.username}</span>
-                                <span className="text-[10px] text-muted-foreground">{formatTimestamp(comment.createdAt)}</span>
-                              </div>
-                              <p className="text-sm text-foreground/80">{comment.content}</p>
-                            </div>
-                            {currentUser?.id === comment.userId && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                onClick={() => deleteCommentMutation.mutate(comment.id)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
+                          <CommentItem
+                            key={comment.id}
+                            comment={comment}
+                            currentUserId={currentUser?.id}
+                            onDelete={() => deleteCommentMutation.mutate(comment.id)}
+                          />
                         ))}
                         {commentsData.length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-2">No comments yet</p>

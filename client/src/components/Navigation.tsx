@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SearchBar } from "@/components/SearchBar";
-import iconUrl from "@/assets/icon.png";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -35,7 +34,7 @@ export default function Navigation() {
         <div className="flex items-center gap-6">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-              <img src={iconUrl} alt="" className="h-8 w-8" />
+              <img src="/logo.png" alt="" className="h-8 w-8" />
               <span className="font-logo text-xl">ORPHAN BARS</span>
             </div>
           </Link>

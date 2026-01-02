@@ -78,9 +78,24 @@ export const comments = pgTable("comments", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const commentsRelations = relations(comments, ({ one }) => ({
+export const commentsRelations = relations(comments, ({ one, many }) => ({
   user: one(users, { fields: [comments.userId], references: [users.id] }),
   bar: one(bars, { fields: [comments.barId], references: [bars.id] }),
+  likes: many(commentLikes),
+}));
+
+export const commentLikes = pgTable("comment_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  commentId: varchar("comment_id").notNull().references(() => comments.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  unique("comment_likes_unique").on(table.userId, table.commentId)
+]);
+
+export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
+  user: one(users, { fields: [commentLikes.userId], references: [users.id] }),
+  comment: one(comments, { fields: [commentLikes.commentId], references: [comments.id] }),
 }));
 
 export const follows = pgTable("follows", {
@@ -103,6 +118,7 @@ export const notifications = pgTable("notifications", {
   type: text("type").notNull(),
   actorId: varchar("actor_id").references(() => users.id, { onDelete: "cascade" }),
   barId: varchar("bar_id").references(() => bars.id, { onDelete: "cascade" }),
+  commentId: varchar("comment_id").references(() => comments.id, { onDelete: "cascade" }),
   message: text("message").notNull(),
   read: boolean("read").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -166,6 +182,7 @@ export type InsertBar = z.infer<typeof insertBarSchema>;
 export type Bar = typeof bars.$inferSelect;
 export type Like = typeof likes.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
+export type CommentLike = typeof commentLikes.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type Follow = typeof follows.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;

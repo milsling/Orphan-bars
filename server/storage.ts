@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, follows, notifications, bookmarks, pushSubscriptions, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type InsertComment, type Notification, type Bookmark, type PushSubscription } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, follows, notifications, bookmarks, pushSubscriptions, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql, or, ilike } from "drizzle-orm";
 
@@ -41,9 +41,15 @@ export interface IStorage {
 
   // Comment methods
   createComment(comment: InsertComment): Promise<Comment>;
-  getComments(barId: string): Promise<Array<Comment & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> }>>;
+  getComments(barId: string): Promise<Array<Comment & { user: Pick<User, 'id' | 'username' | 'avatarUrl'>; likeCount: number }>>;
   deleteComment(id: string, userId: string): Promise<boolean>;
   getCommentCount(barId: string): Promise<number>;
+  
+  // Comment like methods
+  toggleCommentLike(userId: string, commentId: string): Promise<boolean>;
+  getCommentLikeCount(commentId: string): Promise<number>;
+  hasUserLikedComment(userId: string, commentId: string): Promise<boolean>;
+  getCommentById(commentId: string): Promise<Comment | undefined>;
 
   // Follow methods
   followUser(followerId: string, followingId: string): Promise<boolean>;
@@ -55,7 +61,7 @@ export interface IStorage {
   getFollowers(userId: string): Promise<string[]>;
 
   // Notification methods
-  createNotification(data: { userId: string; type: string; actorId?: string; barId?: string; message: string }): Promise<Notification>;
+  createNotification(data: { userId: string; type: string; actorId?: string; barId?: string; commentId?: string; message: string }): Promise<Notification>;
   getNotifications(userId: string, limit?: number): Promise<Array<Notification & { actor?: Pick<User, 'id' | 'username' | 'avatarUrl'> }>>;
   getUnreadCount(userId: string): Promise<number>;
   markNotificationRead(id: string, userId: string): Promise<boolean>;
@@ -277,17 +283,18 @@ export class DatabaseStorage implements IStorage {
     return newComment;
   }
 
-  async getComments(barId: string): Promise<Array<Comment & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> }>> {
+  async getComments(barId: string): Promise<Array<Comment & { user: Pick<User, 'id' | 'username' | 'avatarUrl'>; likeCount: number }>> {
     const result = await db
       .select({
         comment: comments,
-        user: { id: users.id, username: users.username, avatarUrl: users.avatarUrl }
+        user: { id: users.id, username: users.username, avatarUrl: users.avatarUrl },
+        likeCount: sql<number>`(SELECT COUNT(*) FROM comment_likes WHERE comment_id = ${comments.id})`.as('likeCount')
       })
       .from(comments)
       .leftJoin(users, eq(comments.userId, users.id))
       .where(eq(comments.barId, barId))
       .orderBy(desc(comments.createdAt));
-    return result.map(r => ({ ...r.comment, user: r.user as any }));
+    return result.map(r => ({ ...r.comment, user: r.user as any, likeCount: Number(r.likeCount) || 0 }));
   }
 
   async deleteComment(id: string, userId: string): Promise<boolean> {
@@ -298,6 +305,32 @@ export class DatabaseStorage implements IStorage {
   async getCommentCount(barId: string): Promise<number> {
     const [result] = await db.select({ count: count() }).from(comments).where(eq(comments.barId, barId));
     return result?.count || 0;
+  }
+
+  async toggleCommentLike(userId: string, commentId: string): Promise<boolean> {
+    const [existing] = await db.select().from(commentLikes).where(and(eq(commentLikes.userId, userId), eq(commentLikes.commentId, commentId)));
+    if (existing) {
+      await db.delete(commentLikes).where(eq(commentLikes.id, existing.id));
+      return false;
+    } else {
+      await db.insert(commentLikes).values({ userId, commentId });
+      return true;
+    }
+  }
+
+  async getCommentLikeCount(commentId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(commentLikes).where(eq(commentLikes.commentId, commentId));
+    return result?.count || 0;
+  }
+
+  async hasUserLikedComment(userId: string, commentId: string): Promise<boolean> {
+    const [existing] = await db.select().from(commentLikes).where(and(eq(commentLikes.userId, userId), eq(commentLikes.commentId, commentId)));
+    return !!existing;
+  }
+
+  async getCommentById(commentId: string): Promise<Comment | undefined> {
+    const [comment] = await db.select().from(comments).where(eq(comments.id, commentId));
+    return comment || undefined;
   }
 
   async followUser(followerId: string, followingId: string): Promise<boolean> {
