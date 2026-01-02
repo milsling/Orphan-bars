@@ -19,9 +19,14 @@ export function OnlineStatusIndicator() {
   const { data: onlineCount = 0 } = useQuery({
     queryKey: ['onlineCount'],
     queryFn: async () => {
-      const res = await fetch('/api/online/count', { credentials: 'include' });
-      const data = await res.json();
-      return data.count;
+      try {
+        const res = await fetch('/api/online/count', { credentials: 'include' });
+        if (!res.ok) return 0;
+        const data = await res.json();
+        return data.count || 0;
+      } catch {
+        return 0;
+      }
     },
     refetchInterval: 30000,
   });

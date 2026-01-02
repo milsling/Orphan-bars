@@ -61,8 +61,13 @@ export default function UserProfile() {
   const { data: friendshipStatus } = useQuery({
     queryKey: ["friendshipStatus", user?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/friends/status/${user!.id}`, { credentials: 'include' });
-      return res.json();
+      try {
+        const res = await fetch(`/api/friends/status/${user!.id}`, { credentials: 'include' });
+        if (!res.ok) return { status: "none" };
+        return res.json();
+      } catch {
+        return { status: "none" };
+      }
     },
     enabled: !!user?.id && !!currentUser,
   });
