@@ -478,13 +478,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchTags(query: string, limit = 10): Promise<string[]> {
-    const allBars = await db.select({ tags: bars.tags }).from(bars).where(sql`${bars.tags} IS NOT NULL`);
+    const result = await db
+      .select({ tags: bars.tags })
+      .from(bars)
+      .where(sql`${bars.tags} IS NOT NULL AND array_length(${bars.tags}, 1) > 0`);
     const tagSet = new Set<string>();
-    for (const bar of allBars) {
-      if (bar.tags) {
-        for (const tag of bar.tags) {
-          if (tag.toLowerCase().includes(query)) {
-            tagSet.add(tag.toLowerCase());
+    const lowerQuery = query.toLowerCase();
+    for (const row of result) {
+      if (row.tags) {
+        for (const tag of row.tags) {
+          const lowerTag = tag.toLowerCase();
+          if (lowerTag.includes(lowerQuery)) {
+            tagSet.add(lowerTag);
           }
         }
       }
@@ -493,6 +498,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBarsByTag(tag: string): Promise<Array<Bar & { user: User; commentCount: number }>> {
+    const lowerTag = tag.toLowerCase();
     const result = await db
       .select({
         bar: bars,
@@ -511,7 +517,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(bars)
       .leftJoin(users, eq(bars.userId, users.id))
-      .where(sql`${tag} = ANY(${bars.tags})`)
+      .where(sql`LOWER(${lowerTag}) = ANY(SELECT LOWER(unnest(${bars.tags})))`)
       .orderBy(desc(bars.createdAt));
     return result.map(r => ({
       ...r.bar,
