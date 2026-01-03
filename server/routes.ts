@@ -1,7 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, generateProofHash } from "./storage";
 import { setupAuth, isAuthenticated, hashPassword } from "./auth";
+import { bars } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import passport from "passport";
 import { insertUserSchema, insertBarSchema, updateBarSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
@@ -338,21 +341,51 @@ export async function registerRoutes(
         });
       }
 
+      // Check for similar bars (duplicate detection)
+      const similarBars = await storage.findSimilarBars(result.data.content, 0.8);
+      const duplicateWarnings = similarBars.map(sb => ({
+        proofBarId: sb.bar.proofBarId,
+        permissionStatus: sb.bar.permissionStatus,
+        similarity: Math.round(sb.similarity * 100),
+      }));
+
+      // Create the bar first
       const bar = await storage.createBar(result.data);
       
-      // Notify followers about new bar
-      const followers = await storage.getFollowers(req.user!.id);
-      for (const followerId of followers) {
-        await storage.createNotification({
-          userId: followerId,
-          type: "new_bar",
-          actorId: req.user!.id,
-          barId: bar.id,
-          message: `@${req.user!.username} dropped a new bar`
-        });
+      // Generate proof-of-origin data
+      const sequenceNum = await storage.getNextBarSequence();
+      const proofBarId = `orphanbars-#${sequenceNum.toString().padStart(5, '0')}`;
+      
+      // Generate proof hash
+      const proofHash = generateProofHash(bar.content, bar.createdAt, bar.userId, proofBarId);
+      
+      // Update bar with proof data
+      await db.update(bars).set({ 
+        proofBarId, 
+        proofHash,
+        permissionStatus: req.body.permissionStatus || "share_only"
+      }).where(eq(bars.id, bar.id));
+      
+      // Notify followers about new bar (only if not private)
+      const finalPermission = req.body.permissionStatus || "share_only";
+      if (finalPermission !== "private") {
+        const followers = await storage.getFollowers(req.user!.id);
+        for (const followerId of followers) {
+          await storage.createNotification({
+            userId: followerId,
+            type: "new_bar",
+            actorId: req.user!.id,
+            barId: bar.id,
+            message: `@${req.user!.username} dropped a new bar`
+          });
+        }
       }
       
-      res.json(bar);
+      res.json({ 
+        ...bar, 
+        proofHash,
+        duplicateWarnings: duplicateWarnings.length > 0 ? duplicateWarnings : undefined 
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -743,6 +776,84 @@ export async function registerRoutes(
     try {
       const bookmarks = await storage.getUserBookmarks(req.user!.id);
       res.json(bookmarks);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Proof-of-origin routes
+  app.get("/api/bars/by-proof/:proofBarId", async (req, res) => {
+    try {
+      const bar = await storage.getBarByProofId(req.params.proofBarId);
+      if (!bar) {
+        return res.status(404).json({ message: "Bar not found" });
+      }
+      res.json(bar);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/bars/check-similar", isAuthenticated, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+      const similarBars = await storage.findSimilarBars(content, 0.8);
+      res.json(similarBars.map(sb => ({
+        id: sb.bar.id,
+        proofBarId: sb.bar.proofBarId,
+        permissionStatus: sb.bar.permissionStatus,
+        similarity: Math.round(sb.similarity * 100),
+      })));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Adoption routes
+  app.post("/api/bars/:id/adopt", isAuthenticated, async (req, res) => {
+    try {
+      const { originalProofBarId } = req.body;
+      if (!originalProofBarId) {
+        return res.status(400).json({ message: "Original bar ID is required" });
+      }
+      
+      const originalBar = await storage.getBarByProofId(originalProofBarId);
+      if (!originalBar) {
+        return res.status(404).json({ message: "Original bar not found" });
+      }
+      
+      if (originalBar.permissionStatus !== "open_adopt") {
+        return res.status(403).json({ message: "This bar is not open for adoption" });
+      }
+      
+      const adoption = await storage.createAdoption(
+        originalBar.id,
+        req.params.id,
+        req.user!.id
+      );
+      
+      // Notify original creator
+      await storage.createNotification({
+        userId: originalBar.userId,
+        type: "adoption",
+        actorId: req.user!.id,
+        barId: originalBar.id,
+        message: `@${req.user!.username} adopted your bar ${originalProofBarId}`,
+      });
+      
+      res.json(adoption);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/bars/:id/adoptions", async (req, res) => {
+    try {
+      const adoptions = await storage.getAdoptionsByOriginal(req.params.id);
+      res.json(adoptions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

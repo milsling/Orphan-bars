@@ -843,11 +843,13 @@ export class DatabaseStorage implements IStorage {
   private calculateSimilarity(a: string, b: string): number {
     if (a === b) return 1;
     if (!a || !b) return 0;
-    const wordsA = new Set(a.split(' '));
-    const wordsB = new Set(b.split(' '));
-    const intersection = new Set([...wordsA].filter(x => wordsB.has(x)));
-    const union = new Set([...wordsA, ...wordsB]);
-    return intersection.size / union.size;
+    const wordsA = a.split(' ');
+    const wordsB = b.split(' ');
+    const setA = new Set(wordsA);
+    const setB = new Set(wordsB);
+    const intersection = wordsA.filter(x => setB.has(x));
+    const unionSet = new Set(wordsA.concat(wordsB));
+    return intersection.length / unionSet.size;
   }
 
   async createAdoption(originalBarId: string, adoptedByBarId: string, adoptedByUserId: string): Promise<Adoption> {
