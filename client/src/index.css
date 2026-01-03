@@ -168,3 +168,11 @@
     pointer-events: none;
   }
 }
+
+/* Override inline color styles from rich text editor in dark mode */
+.dark [data-testid^="text-content-"] * {
+  color: inherit !important;
+}
+.dark [data-testid^="text-content-"] span[style*="color"] {
+  color: inherit !important;
+}

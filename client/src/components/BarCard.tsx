@@ -461,7 +461,8 @@ export default function BarCard({ bar }: BarCardProps) {
           <CardContent className="space-y-4">
             <div className="relative pl-4 border-l-2 border-primary/50 py-1">
               <p 
-                className="font-display text-lg md:text-xl leading-relaxed whitespace-pre-wrap text-foreground/90 [&>b]:text-primary [&>b]:font-black [&>i]:text-primary/80 [&>u]:decoration-primary [&>u]:decoration-2 [&>u]:underline-offset-4"
+                className="font-display text-lg md:text-xl leading-relaxed whitespace-pre-wrap text-foreground/90 [&>b]:text-primary [&>b]:font-black [&>i]:text-primary/80 [&>u]:decoration-primary [&>u]:decoration-2 [&>u]:underline-offset-4 [&_*]:!text-inherit"
+                style={{ color: 'inherit' }}
                 data-testid={`text-content-${bar.id}`}
                 dangerouslySetInnerHTML={createMarkup(bar.content)}
               />
