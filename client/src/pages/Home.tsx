@@ -22,7 +22,7 @@ type SortFilter = "all" | "technical" | "funny" | "imagery";
 export default function Home() {
   const { bars, isLoadingBars, refetchBars } = useBars();
   const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
-  const [activeTab, setActiveTab] = useState<FeedTab>("featured");
+  const [activeTab, setActiveTab] = useState<FeedTab>("latest");
   const [sortFilter, setSortFilter] = useState<SortFilter>("all");
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
