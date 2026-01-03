@@ -43,6 +43,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <div className="text-center py-12">
               <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
               <p className="text-destructive mb-2">Something went wrong loading this page.</p>
+              <p className="text-xs text-muted-foreground mb-4 font-mono max-w-md mx-auto break-all">
+                {this.state.error?.message || "Unknown error"}
+              </p>
               <Button onClick={() => window.location.reload()}>
                 Try Again
               </Button>
