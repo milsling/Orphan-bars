@@ -7,10 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Bold, Italic, Underline, MessageSquare, Shield, Share2, Users, Lock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Bold, Italic, Underline, MessageSquare, Shield, Share2, Users, Lock, AlertTriangle, Search, CheckCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
+
+type SimilarBar = {
+  id: string;
+  proofBarId: string;
+  permissionStatus: string;
+  similarity: number;
+  username?: string;
+};
 
 type Category = "Funny" | "Serious" | "Wordplay" | "Storytelling" | "Battle" | "Freestyle";
 const CATEGORIES: Category[] = ["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"];
@@ -41,6 +51,11 @@ export default function Post() {
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>("share_only");
   const [isOriginal, setIsOriginal] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [similarBars, setSimilarBars] = useState<SimilarBar[]>([]);
+  const [showSimilarWarning, setShowSimilarWarning] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [showOriginalityReport, setShowOriginalityReport] = useState(false);
+  const [originalityChecked, setOriginalityChecked] = useState(false);
 
   const applyFormat = (command: string) => {
     document.execCommand(command, false);
@@ -51,17 +66,8 @@ export default function Post() {
     return editorRef.current?.innerHTML || "";
   };
 
-  const handleSubmit = async () => {
+  const doPost = async () => {
     const content = getContent();
-    if (!content.trim() || content === "<br>") {
-      toast({
-        title: "Empty bars?",
-        description: "You gotta spit something before you drop it.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       await addBar({
@@ -88,6 +94,66 @@ export default function Post() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    const content = getContent();
+    if (!content.trim() || content === "<br>") {
+      toast({
+        title: "Empty bars?",
+        description: "You gotta spit something before you drop it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChecking(true);
+    try {
+      const similar = await api.checkSimilarBars(content);
+      if (similar.length > 0) {
+        setSimilarBars(similar);
+        setShowSimilarWarning(true);
+      } else {
+        await doPost();
+      }
+    } catch (error) {
+      await doPost();
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handlePostAnyway = async () => {
+    setShowSimilarWarning(false);
+    await doPost();
+  };
+
+  const checkOriginality = async () => {
+    const content = getContent();
+    if (!content.trim() || content === "<br>") {
+      toast({
+        title: "Nothing to check",
+        description: "Write something first to check originality.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChecking(true);
+    try {
+      const similar = await api.checkSimilarBars(content);
+      setSimilarBars(similar);
+      setShowOriginalityReport(true);
+      setOriginalityChecked(true);
+    } catch (error) {
+      toast({
+        title: "Check failed",
+        description: "Could not check originality. Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -150,9 +216,60 @@ export default function Post() {
                 data-placeholder="Type your lyrics here... Use line breaks for flow."
                 data-testid="input-content"
               />
-              <p className="text-xs text-muted-foreground">
-                Tip: Highlight text and click formatting buttons to style your bars.
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Tip: Highlight text and click formatting buttons to style your bars.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={checkOriginality}
+                  disabled={isChecking}
+                  className={`gap-1.5 ${originalityChecked ? (similarBars.length > 0 ? 'border-orange-500 text-orange-500 hover:bg-orange-500/10' : 'border-green-500 text-green-500 hover:bg-green-500/10') : ''}`}
+                  data-testid="button-check-originality"
+                >
+                  {isChecking ? (
+                    <>Checking...</>
+                  ) : originalityChecked ? (
+                    similarBars.length > 0 ? (
+                      <><AlertTriangle className="h-3.5 w-3.5" /> {similarBars.length} Match{similarBars.length > 1 ? 'es' : ''}</>
+                    ) : (
+                      <><CheckCircle className="h-3.5 w-3.5" /> Original</>
+                    )
+                  ) : (
+                    <><Search className="h-3.5 w-3.5" /> Check Originality</>
+                  )}
+                </Button>
+              </div>
+
+              {showOriginalityReport && (
+                <div className={`p-3 rounded-lg border ${similarBars.length > 0 ? 'bg-orange-500/10 border-orange-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+                  {similarBars.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-orange-500 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Similar content found on Orphan Bars
+                      </p>
+                      <div className="space-y-2">
+                        {similarBars.map((bar) => (
+                          <div key={bar.id} className="flex justify-between items-center text-sm bg-background/50 p-2 rounded">
+                            <div>
+                              <span className="font-mono text-primary">{bar.proofBarId}</span>
+                              <span className="text-muted-foreground ml-2">by @{bar.username}</span>
+                            </div>
+                            <span className="font-bold text-orange-500">{bar.similarity}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-green-500 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      No similar content found - looks original!
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -253,14 +370,60 @@ export default function Post() {
             <Button 
               className="w-full text-lg font-bold py-6 bg-primary text-primary-foreground hover:bg-primary/90 mt-4"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isChecking}
               data-testid="button-post"
             >
-              {isSubmitting ? "Posting..." : "Post to Orphan Bars"}
+              {isChecking ? "Checking..." : isSubmitting ? "Posting..." : "Post to Orphan Bars"}
             </Button>
           </CardContent>
         </Card>
       </main>
+
+      <Dialog open={showSimilarWarning} onOpenChange={setShowSimilarWarning}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-yellow-500">
+              <AlertTriangle className="h-5 w-5" />
+              Similar Content Detected
+            </DialogTitle>
+            <DialogDescription>
+              Your bars look similar to existing content on Orphan Bars. This might be duplicate content.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 max-h-60 overflow-y-auto">
+            {similarBars.map((bar) => (
+              <div key={bar.id} className="p-3 bg-secondary/50 rounded-lg border border-border/50">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-sm font-mono text-primary">{bar.proofBarId}</span>
+                    <p className="text-sm text-muted-foreground">by @{bar.username}</p>
+                  </div>
+                  <span className="text-sm font-bold text-yellow-500">{bar.similarity}% match</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowSimilarWarning(false)}
+              data-testid="button-cancel-post"
+            >
+              Go Back
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handlePostAnyway}
+              disabled={isSubmitting}
+              data-testid="button-post-anyway"
+            >
+              {isSubmitting ? "Posting..." : "Post Anyway"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -139,6 +139,15 @@ export const api = {
     return handleResponse<{ message: string }>(response);
   },
 
+  checkSimilarBars: async (content: string): Promise<Array<{ id: string; proofBarId: string; permissionStatus: string; similarity: number; username?: string }>> => {
+    const response = await apiFetch('/api/bars/check-similar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    return handleResponse<Array<{ id: string; proofBarId: string; permissionStatus: string; similarity: number; username?: string }>>(response);
+  },
+
   updateBar: async (barId: string, data: {
     content?: string;
     explanation?: string;

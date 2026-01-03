@@ -993,12 +993,17 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Content is required" });
       }
       const similarBars = await storage.findSimilarBars(content, 0.8);
-      res.json(similarBars.map(sb => ({
-        id: sb.bar.id,
-        proofBarId: sb.bar.proofBarId,
-        permissionStatus: sb.bar.permissionStatus,
-        similarity: Math.round(sb.similarity * 100),
-      })));
+      const results = await Promise.all(similarBars.map(async (sb) => {
+        const user = await storage.getUser(sb.bar.userId);
+        return {
+          id: sb.bar.id,
+          proofBarId: sb.bar.proofBarId,
+          permissionStatus: sb.bar.permissionStatus,
+          similarity: Math.round(sb.similarity * 100),
+          username: user?.username || 'Unknown',
+        };
+      }));
+      res.json(results);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
