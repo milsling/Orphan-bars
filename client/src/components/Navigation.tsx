@@ -200,17 +200,30 @@ export default function Navigation() {
           {/* Right side items */}
           <div className="flex items-center gap-6">
             {currentUser ? (
-              mobileRightItems.map((item) => (
-                <Link key={item.path} href={item.path}>
-                  <div className={cn(
-                    "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
-                    location === item.path ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    <item.icon className="h-5 w-5" />
-                    <span className="text-[9px] font-medium">{item.label}</span>
-                  </div>
-                </Link>
-              ))
+              <>
+                {mobileRightItems.map((item) => (
+                  <Link key={item.path} href={item.path}>
+                    <div className={cn(
+                      "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
+                      location === item.path ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      <item.icon className="h-5 w-5" />
+                      <span className="text-[9px] font-medium">{item.label}</span>
+                    </div>
+                  </Link>
+                ))}
+                {currentUser.isAdmin && (
+                  <Link href="/admin">
+                    <div className={cn(
+                      "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
+                      location === "/admin" ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      <Shield className="h-5 w-5" />
+                      <span className="text-[9px] font-medium">Admin</span>
+                    </div>
+                  </Link>
+                )}
+              </>
             ) : (
               <>
                 <Link href="/auth">
