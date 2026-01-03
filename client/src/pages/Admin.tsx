@@ -19,6 +19,12 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import type { User, BarWithUser } from "@shared/schema";
 
+function stripHtml(html: string): string {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
+
 export default function Admin() {
   const { currentUser, bars } = useBars();
   const { toast } = useToast();
@@ -353,7 +359,7 @@ export default function Admin() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">@{bar.user?.username || "Unknown"}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{bar.content}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{stripHtml(bar.content)}</p>
                         <Badge variant="outline" className="mt-2 text-xs">{bar.category}</Badge>
                       </div>
                       {!bar.user?.isOwner && (

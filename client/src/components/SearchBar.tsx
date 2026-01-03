@@ -16,6 +16,12 @@ interface SearchResult {
 
 const TRENDING_TAGS = ["wordplay", "punchline", "metaphor", "freestyle", "storytelling"];
 
+function stripHtml(html: string): string {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
+
 export function SearchBar({ className }: { className?: string }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -70,7 +76,7 @@ export function SearchBar({ className }: { className?: string }) {
           ...barsData.slice(0, 5).map((b: any) => ({
             type: "bar" as const,
             id: b.id,
-            title: b.content.slice(0, 60) + (b.content.length > 60 ? "..." : ""),
+            title: stripHtml(b.content).slice(0, 60) + (b.content.length > 60 ? "..." : ""),
             subtitle: `by @${b.user?.username || "unknown"}`,
           })),
         ];
