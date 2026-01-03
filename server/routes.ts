@@ -774,6 +774,19 @@ export async function registerRoutes(
   });
 
   // Profile routes
+  app.get("/api/users/by-id/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/users/:username", async (req, res) => {
     try {
       const user = await storage.getUserByUsername(req.params.username);

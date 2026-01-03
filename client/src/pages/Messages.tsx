@@ -58,7 +58,7 @@ export default function Messages() {
   const { data: fetchedUser } = useQuery({
     queryKey: ['user', selectedUserId],
     queryFn: async () => {
-      const res = await fetch(`/api/users/${selectedUserId}`, { credentials: 'include' });
+      const res = await fetch(`/api/users/by-id/${selectedUserId}`, { credentials: 'include' });
       if (!res.ok) return null;
       return res.json();
     },
