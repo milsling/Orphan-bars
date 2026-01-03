@@ -18,16 +18,19 @@ export default function UserProfile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading: userLoading, error } = useQuery({
+  const { data: user, isLoading: userLoading, error, isFetching } = useQuery({
     queryKey: ["user", username],
     queryFn: async () => {
       if (!username) throw new Error("Username required");
       return api.getUser(username);
     },
     enabled: !!username,
-    retry: 2,
-    staleTime: 30000,
+    retry: 1,
+    staleTime: 60000,
+    gcTime: 300000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const { data: bars = [], isLoading: barsLoading } = useQuery({
@@ -41,8 +44,10 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id,
-    staleTime: 30000,
+    staleTime: 60000,
+    gcTime: 300000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const { data: stats = { barsCount: 0, followersCount: 0, followingCount: 0 } } = useQuery({
@@ -56,8 +61,10 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id,
-    staleTime: 30000,
+    staleTime: 60000,
+    gcTime: 300000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const { data: isFollowing = false } = useQuery({
@@ -71,8 +78,10 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id && !!currentUser,
-    staleTime: 30000,
+    staleTime: 60000,
+    gcTime: 300000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const followMutation = useMutation({
@@ -110,8 +119,10 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id && !!currentUser,
-    staleTime: 30000,
+    staleTime: 60000,
+    gcTime: 300000,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const sendFriendRequestMutation = useMutation({
@@ -157,7 +168,7 @@ export default function UserProfile() {
 
   const isOwnProfile = currentUser?.username === username;
 
-  if (userLoading) {
+  if (userLoading || (!user && isFetching)) {
     return (
       <div className="min-h-screen bg-background pb-20 md:pb-0 md:pt-16">
         <Navigation />
