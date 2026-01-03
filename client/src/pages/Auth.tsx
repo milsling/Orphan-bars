@@ -1,5 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+
+const RAP_USERNAMES = [
+  "SpitFire_99",
+  "BarKing",
+  "LyricLord",
+  "FlowMaster",
+  "PunchlinePapi",
+  "VerseBandit",
+  "RhymeSchemer",
+  "WordSmith_X",
+  "SyllableSlayer",
+  "MetaphorMike",
+  "DoubleTime_D",
+  "EntendreKing",
+  "GhostWriter",
+  "PenGame_Pro",
+  "BarBarian",
+  "InkSlinger",
+  "CadenceKid",
+  "SchemeQueen",
+  "FlipMaster",
+  "RawBars_Only",
+];
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,6 +57,16 @@ export default function Auth() {
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [resetStep, setResetStep] = useState<ResetStep>("email");
+  
+  // Cycling placeholder
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % RAP_USERNAMES.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -470,7 +503,7 @@ export default function Auth() {
                 <Input 
                   id="signup-username" 
                   data-testid="input-signup-username"
-                  placeholder="SpitFire_99" 
+                  placeholder={RAP_USERNAMES[placeholderIndex]} 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -563,7 +596,7 @@ export default function Auth() {
                     <Input 
                       id="login-username" 
                       data-testid="input-login-username"
-                      placeholder="SpitFire_99"
+                      placeholder={RAP_USERNAMES[placeholderIndex]}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       required 
