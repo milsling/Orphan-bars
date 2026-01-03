@@ -56,18 +56,74 @@ export default function Navigation() {
           <SearchBar className="w-64" />
         </div>
         
-        <div className="flex items-center gap-6">
-          {desktopItems.map((item) => (
-            <Link key={item.path} href={item.path}>
-              <div className={cn(
-                "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
-                location === item.path ? "text-primary" : "text-muted-foreground"
-              )}>
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </div>
-            </Link>
-          ))}
+        <div className="flex items-center gap-4">
+          {/* Left nav items */}
+          <Link href="/">
+            <div className={cn(
+              "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+              location === "/" ? "text-primary" : "text-muted-foreground"
+            )}>
+              <Home className="h-4 w-4" />
+              Feed
+            </div>
+          </Link>
+          
+          {currentUser && (
+            <>
+              <Link href="/messages">
+                <div className={cn(
+                  "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                  location === "/messages" ? "text-primary" : "text-muted-foreground"
+                )}>
+                  <MessageCircle className="h-4 w-4" />
+                  Messages
+                </div>
+              </Link>
+              
+              {/* Prominent Drop Bar button */}
+              <Link href="/post">
+                <div className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-bold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20",
+                  location === "/post" && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                )}>
+                  <Plus className="h-4 w-4" />
+                  Drop Bar
+                </div>
+              </Link>
+              
+              <Link href="/saved">
+                <div className={cn(
+                  "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                  location === "/saved" ? "text-primary" : "text-muted-foreground"
+                )}>
+                  <Bookmark className="h-4 w-4" />
+                  Saved
+                </div>
+              </Link>
+              
+              <Link href="/profile">
+                <div className={cn(
+                  "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                  location === "/profile" ? "text-primary" : "text-muted-foreground"
+                )}>
+                  <User className="h-4 w-4" />
+                  Profile
+                </div>
+              </Link>
+              
+              {currentUser.isAdmin && (
+                <Link href="/admin">
+                  <div className={cn(
+                    "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                    location === "/admin" ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </div>
+                </Link>
+              )}
+            </>
+          )}
           
           {currentUser && <NotificationBell />}
           
