@@ -126,11 +126,16 @@ export default function BarCard({ bar }: BarCardProps) {
 
   const isOwner = currentUser?.id === bar.user.id;
 
+  // Use pre-fetched like data from bar if available, otherwise fetch
+  const hasPreFetchedLikes = 'liked' in bar && 'likeCount' in bar;
+  
   const { data: likesData } = useQuery({
     queryKey: ['likes', bar.id],
     queryFn: () => api.getLikes(bar.id),
     staleTime: 30000,
     refetchOnWindowFocus: false,
+    enabled: !hasPreFetchedLikes, // Skip fetch if we already have the data
+    initialData: hasPreFetchedLikes ? { count: (bar as any).likeCount, liked: (bar as any).liked } : undefined,
   });
 
   const { data: bookmarkData } = useQuery({
@@ -156,6 +161,11 @@ export default function BarCard({ bar }: BarCardProps) {
     mutationFn: () => api.toggleLike(bar.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['likes', bar.id] });
+      // Also invalidate the bars list to update pre-fetched like data
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+      queryClient.invalidateQueries({ queryKey: ['bars-featured'] });
+      queryClient.invalidateQueries({ queryKey: ['bars-top'] });
+      queryClient.invalidateQueries({ queryKey: ['bars-trending'] });
     },
     onError: (error: any) => {
       if (error.message.includes("Not authenticated")) {

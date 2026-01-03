@@ -397,7 +397,18 @@ export async function registerRoutes(
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const bars = await storage.getBars(limit);
-      res.json(bars);
+      
+      // Include like counts and user's liked status for each bar
+      const userId = req.isAuthenticated() ? req.user!.id : null;
+      const barsWithLikes = await Promise.all(
+        bars.map(async (bar) => {
+          const likeCount = await storage.getLikeCount(bar.id);
+          const liked = userId ? await storage.hasUserLiked(userId, bar.id) : false;
+          return { ...bar, likeCount, liked };
+        })
+      );
+      
+      res.json(barsWithLikes);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -407,7 +418,17 @@ export async function registerRoutes(
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const bars = await storage.getFeaturedBars(limit);
-      res.json(bars);
+      
+      const userId = req.isAuthenticated() ? req.user!.id : null;
+      const barsWithLikes = await Promise.all(
+        bars.map(async (bar) => {
+          const likeCount = await storage.getLikeCount(bar.id);
+          const liked = userId ? await storage.hasUserLiked(userId, bar.id) : false;
+          return { ...bar, likeCount, liked };
+        })
+      );
+      
+      res.json(barsWithLikes);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -417,7 +438,17 @@ export async function registerRoutes(
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const bars = await storage.getTopBars(limit);
-      res.json(bars);
+      
+      const userId = req.isAuthenticated() ? req.user!.id : null;
+      const barsWithLikes = await Promise.all(
+        bars.map(async (bar) => {
+          const likeCount = await storage.getLikeCount(bar.id);
+          const liked = userId ? await storage.hasUserLiked(userId, bar.id) : false;
+          return { ...bar, likeCount, liked };
+        })
+      );
+      
+      res.json(barsWithLikes);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -427,7 +458,17 @@ export async function registerRoutes(
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const bars = await storage.getTrendingBars(limit);
-      res.json(bars);
+      
+      const userId = req.isAuthenticated() ? req.user!.id : null;
+      const barsWithLikes = await Promise.all(
+        bars.map(async (bar) => {
+          const likeCount = await storage.getLikeCount(bar.id);
+          const liked = userId ? await storage.hasUserLiked(userId, bar.id) : false;
+          return { ...bar, likeCount, liked };
+        })
+      );
+      
+      res.json(barsWithLikes);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
