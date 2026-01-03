@@ -1,6 +1,6 @@
 import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gt, count, sql, or, ilike, notInArray } from "drizzle-orm";
+import { eq, desc, and, gt, count, sql, or, ilike, notInArray, ne } from "drizzle-orm";
 import { createHash } from "crypto";
 
 export interface IStorage {
@@ -114,6 +114,12 @@ export interface IStorage {
   getAdoptionsByOriginal(barId: string): Promise<Adoption[]>;
   getAdoptedFromBar(barId: string): Promise<Adoption | undefined>;
   getBarByProofId(proofBarId: string): Promise<(Bar & { user: User }) | undefined>;
+
+  // Feed ranking methods
+  getTopBars(limit?: number): Promise<Array<Bar & { user: User; score: number }>>;
+  getTrendingBars(limit?: number): Promise<Array<Bar & { user: User; velocity: number }>>;
+  getFeaturedBars(limit?: number): Promise<Array<Bar & { user: User }>>;
+  setBarFeatured(barId: string, featured: boolean): Promise<Bar | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -878,6 +884,108 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bars.proofBarId, proofBarId));
     if (!result) return undefined;
     return { ...result.bar, user: result.user as User };
+  }
+
+  async getTopBars(limit: number = 50): Promise<Array<Bar & { user: User; score: number }>> {
+    const allBars = await db
+      .select({ bar: bars, user: users })
+      .from(bars)
+      .leftJoin(users, eq(bars.userId, users.id))
+      .where(ne(bars.permissionStatus, "private"));
+    
+    const barsWithScores = await Promise.all(
+      allBars.map(async (result) => {
+        const likeCount = await this.getLikeCount(result.bar.id);
+        const commentCount = await this.getCommentCount(result.bar.id);
+        const bookmarkCount = await db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.barId, result.bar.id));
+        const score = (likeCount * 3) + (commentCount * 2) + (bookmarkCount[0]?.count || 0);
+        return {
+          ...result.bar,
+          user: result.user as User,
+          score,
+        };
+      })
+    );
+    
+    return barsWithScores
+      .sort((a, b) => b.score - a.score || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
+  async getTrendingBars(limit: number = 50): Promise<Array<Bar & { user: User; velocity: number }>> {
+    const now = new Date();
+    const hoursAgo72 = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+    const hoursAgo24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    const recentBars = await db
+      .select({ bar: bars, user: users })
+      .from(bars)
+      .leftJoin(users, eq(bars.userId, users.id))
+      .where(and(
+        gt(bars.createdAt, hoursAgo72),
+        ne(bars.permissionStatus, "private")
+      ));
+    
+    const barsWithVelocity = await Promise.all(
+      recentBars.map(async (result) => {
+        const recentLikes = await db
+          .select({ count: count() })
+          .from(likes)
+          .where(and(eq(likes.barId, result.bar.id), gt(likes.createdAt, hoursAgo24)));
+        
+        const recentComments = await db
+          .select({ count: count() })
+          .from(comments)
+          .where(and(eq(comments.barId, result.bar.id), gt(comments.createdAt, hoursAgo24)));
+        
+        const hoursOld = Math.max(1, (now.getTime() - new Date(result.bar.createdAt).getTime()) / (1000 * 60 * 60));
+        const engagementIn24h = (recentLikes[0]?.count || 0) * 3 + (recentComments[0]?.count || 0) * 2;
+        const velocity = engagementIn24h / hoursOld;
+        
+        return {
+          ...result.bar,
+          user: result.user as User,
+          velocity,
+        };
+      })
+    );
+    
+    return barsWithVelocity
+      .filter(bar => bar.velocity > 0 || new Date(bar.createdAt).getTime() > hoursAgo24.getTime())
+      .sort((a, b) => b.velocity - a.velocity || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
+  async getFeaturedBars(limit: number = 20): Promise<Array<Bar & { user: User }>> {
+    const featuredResults = await db
+      .select({ bar: bars, user: users })
+      .from(bars)
+      .leftJoin(users, eq(bars.userId, users.id))
+      .where(eq(bars.isFeatured, true))
+      .orderBy(desc(bars.featuredAt))
+      .limit(limit);
+    
+    if (featuredResults.length === 0) {
+      const topBars = await this.getTopBars(limit);
+      return topBars.map(({ score, ...bar }) => bar);
+    }
+    
+    return featuredResults.map(result => ({
+      ...result.bar,
+      user: result.user as User,
+    }));
+  }
+
+  async setBarFeatured(barId: string, featured: boolean): Promise<Bar | undefined> {
+    const [updatedBar] = await db
+      .update(bars)
+      .set({
+        isFeatured: featured,
+        featuredAt: featured ? new Date() : null,
+      })
+      .where(eq(bars.id, barId))
+      .returning();
+    return updatedBar || undefined;
   }
 }
 

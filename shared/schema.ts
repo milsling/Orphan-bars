@@ -56,6 +56,8 @@ export const bars = pgTable("bars", {
   proofBarId: text("proof_bar_id"),
   permissionStatus: text("permission_status").notNull().default("share_only"),
   proofHash: text("proof_hash"),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  featuredAt: timestamp("featured_at"),
 });
 
 export const barsRelations = relations(bars, ({ one, many }) => ({

@@ -403,6 +403,68 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/bars/feed/featured", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const bars = await storage.getFeaturedBars(limit);
+      res.json(bars);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/bars/feed/top", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const bars = await storage.getTopBars(limit);
+      res.json(bars);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/bars/feed/trending", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const bars = await storage.getTrendingBars(limit);
+      res.json(bars);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/bars/:id/feature", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user?.isAdmin && !user?.isOwner) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const bar = await storage.setBarFeatured(req.params.id, true);
+      if (!bar) {
+        return res.status(404).json({ message: "Bar not found" });
+      }
+      res.json(bar);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/bars/:id/feature", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user?.isAdmin && !user?.isOwner) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const bar = await storage.setBarFeatured(req.params.id, false);
+      if (!bar) {
+        return res.status(404).json({ message: "Bar not found" });
+      }
+      res.json(bar);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/bars/user/:userId", async (req, res) => {
     try {
       const bars = await storage.getBarsByUser(req.params.userId);
