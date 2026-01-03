@@ -832,7 +832,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     const result: Array<{ user: Pick<User, 'id' | 'username' | 'avatarUrl' | 'onlineStatus'>; lastMessage: DirectMessage; unreadCount: number }> = [];
-    for (const [otherId, data] of conversationsMap) {
+    const entries = Array.from(conversationsMap.entries());
+    for (const entry of entries) {
+      const otherId = entry[0];
+      const data = entry[1];
       const [user] = await db.select({ id: users.id, username: users.username, avatarUrl: users.avatarUrl, onlineStatus: users.onlineStatus }).from(users).where(eq(users.id, otherId));
       if (user) {
         result.push({ user, ...data });
