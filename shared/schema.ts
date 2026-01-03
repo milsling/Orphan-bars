@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, unique, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+export const permissionStatusOptions = ["share_only", "open_adopt", "private"] as const;
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -51,6 +53,9 @@ export const bars = pgTable("bars", {
   tags: text("tags").array(),
   feedbackWanted: boolean("feedback_wanted").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  proofBarId: text("proof_bar_id").unique(),
+  permissionStatus: text("permission_status").notNull().default("share_only"),
+  proofHash: text("proof_hash"),
 });
 
 export const barsRelations = relations(bars, ({ one, many }) => ({
@@ -180,6 +185,27 @@ export const directMessagesRelations = relations(directMessages, ({ one }) => ({
   receiver: one(users, { fields: [directMessages.receiverId], references: [users.id] }),
 }));
 
+export const adoptions = pgTable("adoptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalBarId: varchar("original_bar_id").notNull().references(() => bars.id, { onDelete: "cascade" }),
+  adoptedByBarId: varchar("adopted_by_bar_id").notNull().references(() => bars.id, { onDelete: "cascade" }),
+  adoptedByUserId: varchar("adopted_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  unique("adoptions_unique").on(table.originalBarId, table.adoptedByBarId)
+]);
+
+export const adoptionsRelations = relations(adoptions, ({ one }) => ({
+  originalBar: one(bars, { fields: [adoptions.originalBarId], references: [bars.id] }),
+  adoptedByBar: one(bars, { fields: [adoptions.adoptedByBarId], references: [bars.id] }),
+  adoptedByUser: one(users, { fields: [adoptions.adoptedByUserId], references: [users.id] }),
+}));
+
+export const barSequence = pgTable("bar_sequence", {
+  id: varchar("id").primaryKey().default("singleton"),
+  currentValue: integer("current_value").notNull().default(0),
+});
+
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
   actor: one(users, { fields: [notifications.actorId], references: [users.id] }),
@@ -195,6 +221,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const insertBarSchema = createInsertSchema(bars).omit({
   id: true,
   createdAt: true,
+  proofBarId: true,
+  proofHash: true,
 });
 
 export const updateBarSchema = z.object({
@@ -224,6 +252,7 @@ export type Bookmark = typeof bookmarks.$inferSelect;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
 export type DirectMessage = typeof directMessages.$inferSelect;
+export type Adoption = typeof adoptions.$inferSelect;
 
 export const onlineStatusOptions = ["online", "offline", "busy"] as const;
 
@@ -235,6 +264,8 @@ export type BarWithUser = Bar & {
     membershipTier: string;
     isOwner?: boolean;
   };
+  adoptionCount?: number;
+  adoptedFromBarId?: string | null;
 };
 
 export const categoryOptions = ["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"] as const;
