@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, generateProofHash } from "./storage";
-import { setupAuth, isAuthenticated, hashPassword } from "./auth";
+import { setupAuth, isAuthenticated, hashPassword, sessionParser } from "./auth";
 import { bars } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -10,6 +10,7 @@ import { insertUserSchema, insertBarSchema, updateBarSchema } from "@shared/sche
 import { fromError } from "zod-validation-error";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendVerificationEmail, sendPasswordResetEmail, generateVerificationCode } from "./email";
+import { setupWebSocket, notifyNewMessage } from "./websocket";
 
 const verificationAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number }>();
@@ -49,6 +50,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   setupAuth(app);
   registerObjectStorageRoutes(app);
+  setupWebSocket(httpServer, sessionParser);
 
   // Auth routes
   app.post("/api/auth/send-code", async (req, res) => {
@@ -1347,6 +1349,10 @@ export async function registerRoutes(
         type: "message",
         actorId: req.user!.id,
         message: `@${req.user!.username} sent you a message`,
+      });
+      notifyNewMessage(req.params.receiverId, {
+        ...message,
+        sender: { id: req.user!.id, username: req.user!.username },
       });
       res.json(message);
     } catch (error: any) {

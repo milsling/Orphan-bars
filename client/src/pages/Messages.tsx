@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link, useLocation, useParams } from "wouter";
-import { MessageCircle, Send, ArrowLeft, Circle } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Circle, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useBars } from "@/context/BarContext";
 import { formatTimestamp } from "@/lib/formatDate";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function Messages() {
   const { currentUser } = useBars();
@@ -22,6 +23,19 @@ export default function Messages() {
   const selectedUserId = params.id;
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const handleNewMessage = useCallback((wsMessage: any) => {
+    if (wsMessage.type === "newMessage" || wsMessage.type === "batchMessages") {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      if (selectedUserId) {
+        queryClient.invalidateQueries({ queryKey: ['messages', selectedUserId] });
+      }
+    }
+  }, [queryClient, selectedUserId]);
+
+  const { isConnected } = useWebSocket({
+    onMessage: handleNewMessage,
+  });
 
   if (!currentUser) {
     setLocation("/auth");
@@ -46,7 +60,7 @@ export default function Messages() {
       return res.json();
     },
     enabled: !!selectedUserId,
-    refetchInterval: selectedUserId ? 5000 : false,
+    refetchInterval: isConnected ? false : (selectedUserId ? 10000 : false),
     staleTime: 5000,
     refetchOnWindowFocus: false,
   });
@@ -120,6 +134,13 @@ export default function Messages() {
         <div className="flex items-center gap-3 mb-6">
           <MessageCircle className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-display font-bold">Messages</h1>
+          <div className="flex items-center gap-1 ml-auto" title={isConnected ? "Real-time connected" : "Polling for updates"}>
+            {isConnected ? (
+              <Wifi className="h-4 w-4 text-green-500" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-200px)] md:h-[600px]">

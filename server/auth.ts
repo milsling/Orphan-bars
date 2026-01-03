@@ -47,25 +47,24 @@ declare global {
   }
 }
 
+const MemoryStore = createMemoryStore(session);
+
+export const sessionParser = session({
+  secret: process.env.SESSION_SECRET || "orphan-bars-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  },
+  store: new MemoryStore({
+    checkPeriod: 86400000,
+  }),
+});
+
 export function setupAuth(app: Express) {
-  const MemoryStore = createMemoryStore(session);
-
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "orphan-bars-secret-key-change-in-production",
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax", // Use lax for better compatibility with in-app browsers
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      },
-      store: new MemoryStore({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
-    })
-  );
-
+  app.use(sessionParser);
   app.use(passport.initialize());
   app.use(passport.session());
 
