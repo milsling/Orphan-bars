@@ -26,6 +26,8 @@ export default function UserProfile() {
     },
     enabled: !!username,
     retry: 2,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: bars = [], isLoading: barsLoading } = useQuery({
@@ -39,9 +41,11 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats = { barsCount: 0, followersCount: 0, followingCount: 0 } } = useQuery({
     queryKey: ["userStats", user?.id],
     queryFn: async () => {
       if (!user?.id) return { barsCount: 0, followersCount: 0, followingCount: 0 };
@@ -52,6 +56,8 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: isFollowing = false } = useQuery({
@@ -65,6 +71,8 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id && !!currentUser,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   const followMutation = useMutation({
@@ -89,7 +97,7 @@ export default function UserProfile() {
     },
   });
 
-  const { data: friendshipStatus } = useQuery({
+  const { data: friendshipStatus = { status: "none" } } = useQuery({
     queryKey: ["friendshipStatus", user?.id],
     queryFn: async () => {
       if (!user?.id) return { status: "none" };
@@ -102,6 +110,8 @@ export default function UserProfile() {
       }
     },
     enabled: !!user?.id && !!currentUser,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   const sendFriendRequestMutation = useMutation({
