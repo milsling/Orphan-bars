@@ -27,10 +27,16 @@ export async function shareContent(data: ShareData): Promise<{ success: boolean;
   }
 }
 
+function stripHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent || '';
+}
+
 export function getBarShareData(bar: { id: string; content: string; user: { username: string } }): ShareData {
-  const truncatedContent = bar.content.length > 100 
-    ? bar.content.substring(0, 100) + "..." 
-    : bar.content;
+  const plainContent = stripHtml(bar.content);
+  const truncatedContent = plainContent.length > 100 
+    ? plainContent.substring(0, 100) + "..." 
+    : plainContent;
   
   return {
     title: `Bar by @${bar.user.username} - Orphan Bars`,
