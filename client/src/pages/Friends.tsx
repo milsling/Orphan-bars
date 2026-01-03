@@ -28,6 +28,8 @@ export default function Friends() {
       const res = await fetch('/api/friends', { credentials: 'include' });
       return res.json();
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: pendingRequests = [], isLoading: loadingRequests } = useQuery({
@@ -36,6 +38,8 @@ export default function Friends() {
       const res = await fetch('/api/friends/requests', { credentials: 'include' });
       return res.json();
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
   const acceptMutation = useMutation({
