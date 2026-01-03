@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BarWithUser } from "@shared/schema";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck } from "lucide-react";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { shareContent, getBarShareData } from "@/lib/share";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -381,6 +381,54 @@ export default function BarCard({ bar }: BarCardProps) {
               <div className="bg-secondary/30 p-3 rounded-md text-sm text-muted-foreground italic" data-testid={`text-explanation-${bar.id}`}>
                 <span className="font-bold text-primary/80 not-italic mr-2">Breakdown:</span>
                 {bar.explanation}
+              </div>
+            )}
+
+            {bar.proofBarId && (
+              <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-3 space-y-2" data-testid={`proof-section-${bar.id}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-mono font-bold text-primary" data-testid={`text-proof-id-${bar.id}`}>
+                      {bar.proofBarId}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(bar.proofBarId || '');
+                        toast({ title: "Copied!", description: "Proof ID copied to clipboard" });
+                      }}
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title="Copy Proof ID"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {bar.permissionStatus === "share_only" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-blue-500/30 text-blue-400" data-testid={`badge-permission-${bar.id}`}>
+                        <Share2 className="h-3 w-3" />
+                        Share Only
+                      </Badge>
+                    )}
+                    {bar.permissionStatus === "open_adopt" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-green-500/30 text-green-400" data-testid={`badge-permission-${bar.id}`}>
+                        <Users className="h-3 w-3" />
+                        Open Adopt
+                      </Badge>
+                    )}
+                    {bar.permissionStatus === "private" && (
+                      <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/30 text-amber-400" data-testid={`badge-permission-${bar.id}`}>
+                        <Lock className="h-3 w-3" />
+                        Private
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {bar.proofHash && (
+                  <div className="text-[10px] font-mono text-muted-foreground/60 truncate" title={bar.proofHash}>
+                    SHA256: {bar.proofHash.substring(0, 16)}...{bar.proofHash.substring(bar.proofHash.length - 8)}
+                  </div>
+                )}
               </div>
             )}
 
