@@ -22,6 +22,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const connect = useCallback(() => {
     if (!currentUser) return;
+    if (typeof window === "undefined" || !window.WebSocket) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
