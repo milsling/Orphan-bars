@@ -7,13 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Bold, Italic, Underline, MessageSquare } from "lucide-react";
+import { ArrowLeft, Bold, Italic, Underline, MessageSquare, Shield, Share2, Users, Lock } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
 
 type Category = "Funny" | "Serious" | "Wordplay" | "Storytelling" | "Battle" | "Freestyle";
 const CATEGORIES: Category[] = ["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"];
+
+type PermissionStatus = "share_only" | "open_adopt" | "private";
+const PERMISSIONS: { value: PermissionStatus; label: string; icon: React.ReactNode; description: string }[] = [
+  { value: "share_only", label: "Share Only", icon: <Share2 className="h-4 w-4" />, description: "Others can share but not adopt" },
+  { value: "open_adopt", label: "Open Adopt", icon: <Users className="h-4 w-4" />, description: "Others can adopt with credit" },
+  { value: "private", label: "Private", icon: <Lock className="h-4 w-4" />, description: "Only visible on your profile" },
+];
 
 export default function Post() {
   const { addBar, currentUser } = useBars();
@@ -31,6 +38,7 @@ export default function Post() {
   const [category, setCategory] = useState<Category>("Freestyle");
   const [tags, setTags] = useState("");
   const [feedbackWanted, setFeedbackWanted] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>("share_only");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const applyFormat = (command: string) => {
@@ -61,6 +69,7 @@ export default function Post() {
         category,
         tags: tags.split(",").map(t => t.trim()).filter(Boolean),
         feedbackWanted,
+        permissionStatus,
       });
 
       toast({
@@ -180,6 +189,31 @@ export default function Post() {
                   className="bg-secondary/30 border-border/50"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                Sharing Permission
+              </Label>
+              <Select value={permissionStatus} onValueChange={(val: PermissionStatus) => setPermissionStatus(val)}>
+                <SelectTrigger className="bg-secondary/30 border-border/50" data-testid="select-permission">
+                  <SelectValue placeholder="Select permission" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERMISSIONS.map(perm => (
+                    <SelectItem key={perm.value} value={perm.value}>
+                      <div className="flex items-center gap-2">
+                        {perm.icon}
+                        <span>{perm.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {PERMISSIONS.find(p => p.value === permissionStatus)?.description}
+              </p>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border/50">

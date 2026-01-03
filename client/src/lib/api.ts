@@ -121,6 +121,7 @@ export const api = {
     category: string;
     tags: string[];
     feedbackWanted?: boolean;
+    permissionStatus?: string;
   }): Promise<BarWithUser> => {
     const response = await apiFetch('/api/bars', {
       method: 'POST',

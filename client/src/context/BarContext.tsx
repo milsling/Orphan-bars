@@ -13,6 +13,7 @@ interface BarContextType {
     category: string;
     tags: string[];
     feedbackWanted?: boolean;
+    permissionStatus?: string;
   }) => Promise<void>;
   currentUser: User | null;
   isLoadingUser: boolean;
@@ -87,6 +88,7 @@ export function BarProvider({ children }: { children: ReactNode }) {
       category: string;
       tags: string[];
       feedbackWanted?: boolean;
+      permissionStatus?: string;
     }) => api.createBar(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bars'] });
@@ -120,6 +122,7 @@ export function BarProvider({ children }: { children: ReactNode }) {
     category: string;
     tags: string[];
     feedbackWanted?: boolean;
+    permissionStatus?: string;
   }) => {
     await createBarMutation.mutateAsync(newBarData);
   };
