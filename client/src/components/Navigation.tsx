@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, PlusSquare, LogIn, Shield, Bookmark, Users, MessageCircle } from "lucide-react";
+import { Home, User, Plus, LogIn, Shield, Bookmark, Users, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBars } from "@/context/BarContext";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,12 @@ export default function Navigation() {
   const [location] = useLocation();
   const { currentUser } = useBars();
 
-  const navItems = [
+  const desktopNavItems = [
     { icon: Home, label: "Feed", path: "/" },
   ];
 
-  const authenticatedItems = [
-    { icon: PlusSquare, label: "Drop Bar", path: "/post" },
+  const desktopAuthItems = [
+    { icon: Plus, label: "Drop Bar", path: "/post" },
     { icon: Users, label: "Friends", path: "/friends" },
     { icon: MessageCircle, label: "Messages", path: "/messages" },
     { icon: Bookmark, label: "Saved", path: "/saved" },
@@ -29,7 +29,18 @@ export default function Navigation() {
     { icon: Shield, label: "Admin", path: "/admin" },
   ] : [];
 
-  const allItems = currentUser ? [...navItems, ...authenticatedItems, ...adminItems] : navItems;
+  const desktopItems = currentUser ? [...desktopNavItems, ...desktopAuthItems, ...adminItems] : desktopNavItems;
+
+  // Mobile nav: 4 items around the edges, center button for Drop Bar
+  const mobileLeftItems = [
+    { icon: Home, label: "Feed", path: "/" },
+    { icon: MessageCircle, label: "Messages", path: "/messages" },
+  ];
+  
+  const mobileRightItems = [
+    { icon: Bookmark, label: "Saved", path: "/saved" },
+    { icon: User, label: "Profile", path: "/profile" },
+  ];
 
   return (
     <>
@@ -46,7 +57,7 @@ export default function Navigation() {
         </div>
         
         <div className="flex items-center gap-6">
-          {allItems.map((item) => (
+          {desktopItems.map((item) => (
             <Link key={item.path} href={item.path}>
               <div className={cn(
                 "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
@@ -91,30 +102,74 @@ export default function Navigation() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background/90 backdrop-blur-lg z-50 flex items-center justify-around px-2 pb-safe">
-        {allItems.map((item) => (
-          <Link key={item.path} href={item.path}>
-            <div className={cn(
-              "flex flex-col items-center gap-1 p-2 transition-colors cursor-pointer",
-              location === item.path ? "text-primary" : "text-muted-foreground"
-            )}>
-              <item.icon className={cn("h-6 w-6", location === item.path && "fill-current/20")} />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </div>
-          </Link>
-        ))}
-        
-        {!currentUser && (
-          <Link href="/auth">
-            <div className={cn(
-              "flex flex-col items-center gap-1 p-2 transition-colors cursor-pointer",
-              location === "/auth" ? "text-primary" : "text-muted-foreground"
-            )}>
-              <LogIn className={cn("h-6 w-6", location === "/auth" && "fill-current/20")} />
-              <span className="text-[10px] font-medium">Login</span>
-            </div>
-          </Link>
-        )}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background/90 backdrop-blur-lg z-50 pb-safe">
+        <div className="relative h-full flex items-center justify-between px-6">
+          {/* Left side items */}
+          <div className="flex items-center gap-6">
+            {mobileLeftItems.map((item) => (
+              <Link key={item.path} href={item.path}>
+                <div className={cn(
+                  "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
+                  location === item.path ? "text-primary" : "text-muted-foreground"
+                )}>
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-[9px] font-medium">{item.label}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Center Drop Bar button */}
+          {currentUser ? (
+            <Link href="/post">
+              <div className="absolute left-1/2 -translate-x-1/2 -top-5">
+                <div className={cn(
+                  "w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30 transition-transform hover:scale-105 active:scale-95",
+                  location === "/post" && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                )}>
+                  <Plus className="h-7 w-7 text-primary-foreground" />
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <Link href="/auth">
+              <div className="absolute left-1/2 -translate-x-1/2 -top-5">
+                <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30 transition-transform hover:scale-105 active:scale-95">
+                  <LogIn className="h-6 w-6 text-primary-foreground" />
+                </div>
+              </div>
+            </Link>
+          )}
+
+          {/* Right side items */}
+          <div className="flex items-center gap-6">
+            {currentUser ? (
+              mobileRightItems.map((item) => (
+                <Link key={item.path} href={item.path}>
+                  <div className={cn(
+                    "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
+                    location === item.path ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    <item.icon className="h-5 w-5" />
+                    <span className="text-[9px] font-medium">{item.label}</span>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <>
+                <Link href="/auth">
+                  <div className={cn(
+                    "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
+                    location === "/auth" ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    <LogIn className="h-5 w-5" />
+                    <span className="text-[9px] font-medium">Login</span>
+                  </div>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
       </nav>
     </>
   );
