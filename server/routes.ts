@@ -215,7 +215,13 @@ export async function registerRoutes(
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.json({ message: "Logged out successfully" });
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).json({ message: "Session cleanup failed" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logged out successfully" });
+      });
     });
   });
 
