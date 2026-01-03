@@ -124,3 +124,38 @@ Preferred communication style: Simple, everyday language.
 - **Friends Only**: Can only message accepted friends
 - **Read Receipts**: Messages marked as read when conversation opened
 - **Notifications**: New message notifications
+
+## Proof-of-Origin System
+
+### Immutable Bar Tracking
+- **Unique IDs**: Each bar receives a permanent sequential ID in format `orphanbars-#XXXXX`
+- **Immutable Timestamp**: Creation time captured at post creation, cannot be modified
+- **Tamper-Proof Hash**: SHA256 hash of content+timestamp+userId+proofBarId stored for verification
+- **Permission Status**: Creator can set sharing permissions (share_only, open_adopt, private)
+
+### Permission Levels
+- **Share Only** (default): Others can share/link but cannot claim authorship
+- **Open Adopt**: Others can adopt the bar with automatic credit to original creator
+- **Private**: Bar only visible on creator's profile, no follower notifications
+
+### Duplicate Detection
+- **Similarity Threshold**: 80% word-based Jaccard similarity triggers warnings
+- **Pre-Submission Check**: API endpoint `/api/bars/check-similar` validates content before posting
+- **Normalized Comparison**: HTML stripped, text lowercased for accurate comparison
+
+### Adoption System
+- **Adoption Receipt**: Links adopted bar to original via `adoptions` table
+- **Attribution**: Original creator notified when bar is adopted
+- **Chain Tracking**: Full lineage from original to all adoptions preserved
+
+### Proof Screenshot
+- **Shareable Image**: Generate proof image with bar content, ID, hash, timestamp
+- **Download/Share**: Save to device or share directly via native share API
+- **Visual Verification**: Displays SHA256 hash and creation timestamp in UTC
+
+### Database Schema
+- **bars.proofBarId**: Unique permanent ID (orphanbars-#XXXXX format)
+- **bars.proofHash**: SHA256 hash for tamper detection
+- **bars.permissionStatus**: share_only | open_adopt | private
+- **adoptions**: Links adopted bars to originals with timestamps
+- **barSequence**: Singleton table for sequential ID generation
