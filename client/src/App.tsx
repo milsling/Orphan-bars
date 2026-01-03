@@ -17,6 +17,7 @@ import Saved from "@/pages/Saved";
 import Friends from "@/pages/Friends";
 import Messages from "@/pages/Messages";
 import { BarProvider } from "@/context/BarContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function Router() {
   const [location] = useLocation();
@@ -43,7 +44,13 @@ function Router() {
           <Route path="/messages/:id" component={Messages} />
           <Route path="/discover" component={Home} />
           <Route path="/bars/:id" component={BarDetail} />
-          <Route path="/u/:username" component={UserProfile} />
+          <Route path="/u/:username">
+            {(params) => (
+              <ErrorBoundary>
+                <UserProfile />
+              </ErrorBoundary>
+            )}
+          </Route>
           <Route component={NotFound} />
         </Switch>
       </motion.div>
