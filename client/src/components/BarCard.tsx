@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BarWithUser } from "@shared/schema";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { shareContent, getBarShareData } from "@/lib/share";
 import ProofScreenshot from "@/components/ProofScreenshot";
@@ -164,6 +164,9 @@ export default function BarCard({ bar }: BarCardProps) {
   const [editCategory, setEditCategory] = useState(bar.category);
   const [editTags, setEditTags] = useState(bar.tags?.join(", ") || "");
   const [showProofScreenshot, setShowProofScreenshot] = useState(false);
+  const [showOriginalityReport, setShowOriginalityReport] = useState(false);
+  const [originalityData, setOriginalityData] = useState<Array<{ id: string; proofBarId: string; similarity: number; username?: string }>>([]);
+  const [isCheckingOriginality, setIsCheckingOriginality] = useState(false);
 
   const isOwner = currentUser?.id === bar.user.id;
 
@@ -380,6 +383,24 @@ export default function BarCard({ bar }: BarCardProps) {
     }
   };
 
+  const handleCheckOriginality = async () => {
+    setIsCheckingOriginality(true);
+    try {
+      const similar = await api.checkSimilarBars(bar.content);
+      const filteredSimilar = similar.filter(s => s.id !== bar.id);
+      setOriginalityData(filteredSimilar);
+      setShowOriginalityReport(true);
+    } catch (error) {
+      toast({
+        title: "Check failed",
+        description: "Could not check originality. Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCheckingOriginality(false);
+    }
+  };
+
   return (
     <>
       <motion.div
@@ -433,29 +454,31 @@ export default function BarCard({ bar }: BarCardProps) {
                 </span>
               </div>
             </div>
-            {isOwner ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" data-testid={`button-more-${bar.id}`}>
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => { setEditContent(stripHtml(bar.content)); setIsEditOpen(true); }} data-testid={`button-edit-${bar.id}`}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsDeleteOpen(true)} className="text-destructive" data-testid={`button-delete-${bar.id}`}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" data-testid={`button-more-${bar.id}`}>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" data-testid={`button-more-${bar.id}`}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCheckOriginality} disabled={isCheckingOriginality} data-testid={`button-originality-${bar.id}`}>
+                  <Search className="h-4 w-4 mr-2" />
+                  {isCheckingOriginality ? "Checking..." : "Originality Check"}
+                </DropdownMenuItem>
+                {isOwner && (
+                  <>
+                    <DropdownMenuItem onClick={() => { setEditContent(stripHtml(bar.content)); setIsEditOpen(true); }} data-testid={`button-edit-${bar.id}`}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsDeleteOpen(true)} className="text-destructive" data-testid={`button-delete-${bar.id}`}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </CardHeader>
           
           <CardContent className="space-y-4">
@@ -759,6 +782,55 @@ export default function BarCard({ bar }: BarCardProps) {
         open={showProofScreenshot}
         onOpenChange={setShowProofScreenshot}
       />
+
+      <Dialog open={showOriginalityReport} onOpenChange={setShowOriginalityReport}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {originalityData.length > 0 ? (
+                <><AlertTriangle className="h-5 w-5 text-orange-500" /> Originality Report</>
+              ) : (
+                <><CheckCircle className="h-5 w-5 text-green-500" /> Originality Report</>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            <div className={`p-3 rounded-lg ${originalityData.length > 0 ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+              {originalityData.length > 0 ? (
+                <p className="text-sm text-orange-500">
+                  Found {originalityData.length} similar bar{originalityData.length > 1 ? 's' : ''} on Orphan Bars
+                </p>
+              ) : (
+                <p className="text-sm text-green-500 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  No similar content found - this appears to be original!
+                </p>
+              )}
+            </div>
+
+            {originalityData.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {originalityData.map((match) => (
+                  <div key={match.id} className="flex justify-between items-center p-3 bg-secondary/50 rounded-lg border border-border/50">
+                    <div>
+                      <span className="text-sm font-mono text-primary">{match.proofBarId}</span>
+                      <p className="text-xs text-muted-foreground">by @{match.username || 'Unknown'}</p>
+                    </div>
+                    <span className="text-sm font-bold text-orange-500">{match.similarity}% match</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowOriginalityReport(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
