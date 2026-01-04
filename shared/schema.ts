@@ -66,6 +66,7 @@ export const bars = pgTable("bars", {
   featuredAt: timestamp("featured_at"),
   barType: text("bar_type").notNull().default("single_bar"),
   fullRapLink: text("full_rap_link"),
+  beatLink: text("beat_link"),
   isRecorded: boolean("is_recorded").notNull().default(false),
   moderationStatus: text("moderation_status").notNull().default("approved"),
   moderationScore: integer("moderation_score"),
@@ -346,6 +347,7 @@ export const updateBarSchema = z.object({
   feedbackWanted: z.boolean().optional(),
   barType: z.enum(["single_bar", "snippet", "half_verse"]).optional(),
   fullRapLink: z.string().optional().nullable().transform(v => v === "" ? null : v).pipe(z.string().url().nullable().optional()),
+  beatLink: z.string().optional().nullable().transform(v => v === "" ? null : v).pipe(z.string().url().nullable().optional()),
 });
 
 export const insertCommentSchema = createInsertSchema(comments).omit({
