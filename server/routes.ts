@@ -374,6 +374,20 @@ export async function registerRoutes(
         similarity: Math.round(sb.similarity * 100),
       }));
 
+      // Validate beatLink if provided - only allow trusted domains
+      if (result.data.beatLink) {
+        try {
+          const url = new URL(result.data.beatLink);
+          const hostname = url.hostname.replace("www.", "");
+          const allowedHosts = ["youtube.com", "youtu.be", "soundcloud.com", "open.spotify.com", "audiomack.com"];
+          if (!allowedHosts.includes(hostname)) {
+            return res.status(400).json({ message: "Beat link must be from YouTube, SoundCloud, or Spotify" });
+          }
+        } catch {
+          return res.status(400).json({ message: "Invalid beat link URL" });
+        }
+      }
+
       // Set moderation status based on analysis
       const barData = {
         ...result.data,
@@ -401,7 +415,8 @@ export async function registerRoutes(
         ...(proofHash && { proofHash }),
         permissionStatus: req.body.permissionStatus || "share_only",
         barType: req.body.barType || "single_bar",
-        fullRapLink: req.body.fullRapLink || null
+        fullRapLink: req.body.fullRapLink || null,
+        beatLink: req.body.beatLink || null
       }).where(eq(bars.id, bar.id));
       
       // Notify followers about new bar (only if not private)

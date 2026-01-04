@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { BarWithUser } from "@shared/schema";
 import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag } from "lucide-react";
+import { BarMediaPlayer } from "@/components/BarMediaPlayer";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { shareContent, getBarShareData } from "@/lib/share";
 import ProofScreenshot from "@/components/ProofScreenshot";
@@ -637,6 +638,10 @@ export default function BarCard({ bar }: BarCardProps) {
                 </span>
                 <ExternalLink className="h-3 w-3 text-purple-400/60 group-hover:text-purple-300 transition-colors ml-auto" />
               </a>
+            )}
+
+            {(bar as any).beatLink && (
+              <BarMediaPlayer beatLink={(bar as any).beatLink} compact />
             )}
 
             {bar.proofBarId && (

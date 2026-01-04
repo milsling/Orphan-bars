@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Bold, Italic, Underline, MessageSquare, Shield, Share2, Users, Lock, AlertTriangle, Search, CheckCircle } from "lucide-react";
+import { ArrowLeft, Bold, Italic, Underline, MessageSquare, Shield, Share2, Users, Lock, AlertTriangle, Search, CheckCircle, Music } from "lucide-react";
+import { validateBeatUrl } from "@/components/BarMediaPlayer";
 import { Link, useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +70,7 @@ export default function Post() {
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>("share_only");
   const [barType, setBarType] = useState<BarType>("single_bar");
   const [fullRapLink, setFullRapLink] = useState("");
+  const [beatLink, setBeatLink] = useState("");
   const [isRecorded, setIsRecorded] = useState(false);
   const [isOriginal, setIsOriginal] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,6 +112,7 @@ export default function Post() {
         permissionStatus,
         barType,
         fullRapLink: fullRapLink.trim() || undefined,
+        beatLink: beatLink.trim() || undefined,
         isRecorded: fullRapLink.trim() ? isRecorded : false,
         isOriginal,
       });
@@ -152,6 +155,18 @@ export default function Post() {
         variant: "destructive",
       });
       return;
+    }
+
+    if (beatLink.trim()) {
+      const beatValidation = validateBeatUrl(beatLink);
+      if (!beatValidation.valid) {
+        toast({
+          title: "Invalid beat link",
+          description: beatValidation.error || "Only YouTube, SoundCloud, and Spotify links are supported.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsChecking(true);
@@ -414,6 +429,35 @@ export default function Post() {
                     This track is recorded
                   </Label>
                 </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="beatLink">Beat/Instrumental Link (Optional)</Label>
+              <Input 
+                id="beatLink" 
+                type="url"
+                value={beatLink}
+                onChange={(e) => setBeatLink(e.target.value)}
+                placeholder="https://youtube.com/... or SoundCloud/Spotify link to the beat" 
+                className={`bg-secondary/30 border-border/50 ${beatLink.trim() && !validateBeatUrl(beatLink).valid ? 'border-red-500' : ''}`}
+                data-testid="input-beat-link"
+              />
+              {beatLink.trim() ? (
+                validateBeatUrl(beatLink).valid ? (
+                  <div className="flex items-center gap-1.5 text-xs text-green-500">
+                    <Music className="h-3 w-3" />
+                    <span>{validateBeatUrl(beatLink).provider} detected - will embed player</span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-red-500">
+                    {validateBeatUrl(beatLink).error}
+                  </p>
+                )
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Link the beat/instrumental so readers can hear what this bar could ride to. Works with YouTube, SoundCloud, and Spotify.
+                </p>
               )}
             </div>
 
