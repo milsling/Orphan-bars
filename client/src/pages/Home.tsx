@@ -5,7 +5,7 @@ import CategoryFilter from "@/components/CategoryFilter";
 import { BarSkeletonList } from "@/components/BarSkeleton";
 import { SearchBar } from "@/components/SearchBar";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { Clock, Flame, Trophy, Grid3X3, Hash, X, Lightbulb, Laugh, Palette, HelpCircle, Star } from "lucide-react";
+import { Clock, Flame, Trophy, Grid3X3, Hash, X, Lightbulb, Laugh, Palette, HelpCircle, Star, BadgeCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import iconUrl from "@/assets/icon.png";
 import { useBars } from "@/context/BarContext";
@@ -24,6 +24,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
   const [activeTab, setActiveTab] = useState<FeedTab>("latest");
   const [sortFilter, setSortFilter] = useState<SortFilter>("all");
+  const [originalOnly, setOriginalOnly] = useState(false);
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
@@ -133,8 +134,12 @@ export default function Home() {
       });
     }
 
+    if (originalOnly) {
+      result = result.filter(bar => bar.isOriginal);
+    }
+
     return result;
-  }, [bars, tagBars, tagFilter, activeTab, selectedCategory, sortFilter, featuredBars, topBars, trendingBars]);
+  }, [bars, tagBars, tagFilter, activeTab, selectedCategory, sortFilter, originalOnly, featuredBars, topBars, trendingBars]);
 
   const isLoading = tagFilter ? isLoadingTagBars : 
     activeTab === "featured" ? isLoadingFeatured :
@@ -263,6 +268,17 @@ export default function Home() {
                     >
                       <Palette className="h-3 w-3" />
                       Craziest Imagery
+                    </Button>
+                    <div className="border-l border-border mx-1" />
+                    <Button
+                      variant={originalOnly ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setOriginalOnly(!originalOnly)}
+                      className={`text-xs gap-1 ${originalOnly ? "bg-primary" : ""}`}
+                      data-testid="filter-original"
+                    >
+                      <BadgeCheck className="h-3 w-3" />
+                      OC Only
                     </Button>
                   </div>
                 </div>
