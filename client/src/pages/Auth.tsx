@@ -747,7 +747,7 @@ export default function Auth() {
       </Card>
       
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        By continuing, you agree to our <span className="underline cursor-pointer hover:text-primary">Terms of Service</span> and <span className="underline cursor-pointer hover:text-primary">Privacy Policy</span>.
+        By continuing, you agree to our <Link href="/terms" className="underline cursor-pointer hover:text-primary">Terms of Service</Link> and <Link href="/guidelines" className="underline cursor-pointer hover:text-primary">Community Guidelines</Link>.
       </p>
       </div>
     </div>
