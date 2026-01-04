@@ -39,6 +39,24 @@ const BAR_TYPES: { value: BarType; label: string; description: string; disabled?
   { value: "half_verse", label: "Half Verse", description: "8 bars max", disabled: true, badge: "Paid" },
 ];
 
+const LINE_BREAK_LIMITS: Record<BarType, number> = {
+  single_bar: 1,
+  snippet: 4,
+  half_verse: 8,
+};
+
+const countLineBreaks = (html: string): number => {
+  let text = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '');
+  text = text.replace(/\n+/g, '\n').trim();
+  return (text.match(/\n/g) || []).length;
+};
+
 export default function Post() {
   const { addBar, currentUser } = useBars();
   const { toast } = useToast();
@@ -117,6 +135,18 @@ export default function Post() {
       toast({
         title: "Empty bars?",
         description: "You gotta spit something before you drop it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const lineBreaks = countLineBreaks(content);
+    const maxLines = LINE_BREAK_LIMITS[barType];
+    if (lineBreaks > maxLines) {
+      const typeLabel = BAR_TYPES.find(t => t.value === barType)?.label || barType;
+      toast({
+        title: "Too many lines",
+        description: `${typeLabel} allows max ${maxLines} line break${maxLines === 1 ? '' : 's'}. You have ${lineBreaks}.`,
         variant: "destructive",
       });
       return;

@@ -28,6 +28,32 @@ interface BarCardProps {
   bar: BarWithUser;
 }
 
+type BarType = "single_bar" | "snippet" | "half_verse";
+
+const LINE_BREAK_LIMITS: Record<BarType, number> = {
+  single_bar: 1,
+  snippet: 4,
+  half_verse: 8,
+};
+
+const BAR_TYPE_LABELS: Record<BarType, string> = {
+  single_bar: "Single Bar",
+  snippet: "Snippet",
+  half_verse: "Half Verse",
+};
+
+const countLineBreaks = (html: string): number => {
+  let text = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '');
+  text = text.replace(/\n+/g, '\n').trim();
+  return (text.match(/\n/g) || []).length;
+};
+
 interface CommentItemProps {
   comment: any;
   currentUserId?: string;
@@ -806,7 +832,19 @@ export default function BarCard({ bar }: BarCardProps) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
             <Button 
-              onClick={() => updateMutation.mutate()} 
+              onClick={() => {
+                const lineBreaks = countLineBreaks(editContent);
+                const maxLines = LINE_BREAK_LIMITS[editBarType as BarType];
+                if (lineBreaks > maxLines) {
+                  toast({
+                    title: "Too many lines",
+                    description: `${BAR_TYPE_LABELS[editBarType as BarType]} allows max ${maxLines} line break${maxLines === 1 ? '' : 's'}. You have ${lineBreaks}.`,
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                updateMutation.mutate();
+              }} 
               disabled={updateMutation.isPending || !editContent.trim()}
               data-testid="button-save-edit"
             >
