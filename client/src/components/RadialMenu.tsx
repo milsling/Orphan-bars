@@ -231,7 +231,11 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
 
       <div 
         ref={containerRef}
-        className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none"
+        className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none select-none"
+        style={{
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+        } as React.CSSProperties}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchCancel}
@@ -324,8 +328,13 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
               "flex items-center justify-center",
               "shadow-xl shadow-primary/40",
               "transition-all duration-200",
+              "select-none",
               isOpen && "from-destructive to-destructive/80 shadow-destructive/40"
             )}
+            style={{
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+            } as React.CSSProperties}
             whileTap={{ scale: 0.9 }}
             data-testid="button-radial-menu"
           >
