@@ -512,7 +512,7 @@ export class DatabaseStorage implements IStorage {
     return result.map(r => r.followerId);
   }
 
-  async createNotification(data: { userId: string; type: string; actorId?: string; barId?: string; message: string }): Promise<Notification> {
+  async createNotification(data: { userId: string; type: string; actorId?: string; barId?: string; commentId?: string; message: string }): Promise<Notification> {
     const [notification] = await db.insert(notifications).values(data).returning();
     return notification;
   }

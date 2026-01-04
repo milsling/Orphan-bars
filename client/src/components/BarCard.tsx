@@ -334,6 +334,7 @@ export default function BarCard({ bar }: BarCardProps) {
     mutationFn: () => api.deleteBar(bar.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bars'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       toast({ title: "Bar deleted" });
     },
     onError: (error: any) => {

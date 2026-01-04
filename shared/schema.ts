@@ -296,7 +296,7 @@ export const updateBarSchema = z.object({
   tags: z.array(z.string()).optional(),
   feedbackWanted: z.boolean().optional(),
   barType: z.enum(["single_bar", "snippet", "half_verse"]).optional(),
-  fullRapLink: z.string().url().optional().nullable().or(z.literal("")),
+  fullRapLink: z.string().optional().nullable().transform(v => v === "" ? null : v).pipe(z.string().url().nullable().optional()),
 });
 
 export const insertCommentSchema = createInsertSchema(comments).omit({
