@@ -235,6 +235,9 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
         style={{
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
+          userSelect: 'none',
         } as React.CSSProperties}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -334,6 +337,10 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
             style={{
               WebkitTouchCallout: 'none',
               WebkitUserSelect: 'none',
+              MozUserSelect: 'none',
+              msUserSelect: 'none',
+              userSelect: 'none',
+              touchAction: 'none',
             } as React.CSSProperties}
             whileTap={{ scale: 0.9 }}
             data-testid="button-radial-menu"
