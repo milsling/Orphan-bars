@@ -231,7 +231,12 @@ export async function registerRoutes(
         if (err) {
           return res.status(500).json({ message: "Session cleanup failed" });
         }
-        res.clearCookie('connect.sid');
+        // Clear cookie with matching options to ensure it's properly removed
+        res.clearCookie('connect.sid', {
+          path: '/',
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+        });
         res.json({ message: "Logged out successfully" });
       });
     });

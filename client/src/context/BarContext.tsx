@@ -80,8 +80,9 @@ export function BarProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: () => api.logout(),
     onSuccess: () => {
+      // Clear all cached data to ensure clean logout state
+      queryClient.clear();
       queryClient.setQueryData(['currentUser'], null);
-      queryClient.invalidateQueries({ queryKey: ['bars'] });
     },
   });
 
