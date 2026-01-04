@@ -239,6 +239,34 @@ export const barSequence = pgTable("bar_sequence", {
   currentValue: integer("current_value").notNull().default(0),
 });
 
+export const userAchievements = pgTable("user_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  achievementId: text("achievement_id").notNull(),
+  unlockedAt: timestamp("unlocked_at").notNull().defaultNow(),
+}, (table) => [
+  unique("user_achievements_unique").on(table.userId, table.achievementId)
+]);
+
+export const userAchievementsRelations = relations(userAchievements, ({ one }) => ({
+  user: one(users, { fields: [userAchievements.userId], references: [users.id] }),
+}));
+
+export const ACHIEVEMENTS = {
+  first_bar: { name: "Origin Founder", emoji: "🔥", description: "Posted your first bar", threshold: { barsMinted: 1 } },
+  bar_slinger: { name: "Bar Slinger", emoji: "💀", description: "Posted 10 bars", threshold: { barsMinted: 10 } },
+  bar_lord: { name: "Bar Lord", emoji: "👑", description: "Posted 50 bars", threshold: { barsMinted: 50 } },
+  crowd_pleaser: { name: "Crowd Pleaser", emoji: "🎤", description: "Received 100 total likes", threshold: { likesReceived: 100 } },
+  cult_leader: { name: "Cult Leader", emoji: "🪖", description: "Gained 50 followers", threshold: { followers: 50 } },
+  immortal_bar: { name: "Immortal", emoji: "🌹", description: "One bar reached 500 likes", threshold: { topBarLikes: 500 } },
+  milsling_legacy: { name: "Milsling Heir", emoji: "⚔️", description: "Received 1000 total likes", threshold: { likesReceived: 1000 } },
+  wordsmith: { name: "Wordsmith", emoji: "✍️", description: "Posted 25 bars", threshold: { barsMinted: 25 } },
+  rising_star: { name: "Rising Star", emoji: "⭐", description: "Gained 10 followers", threshold: { followers: 10 } },
+  viral: { name: "Viral", emoji: "🔥", description: "One bar reached 100 likes", threshold: { topBarLikes: 100 } },
+} as const;
+
+export type AchievementId = keyof typeof ACHIEVEMENTS;
+
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
   actor: one(users, { fields: [notifications.actorId], references: [users.id] }),
@@ -286,6 +314,7 @@ export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
 export type DirectMessage = typeof directMessages.$inferSelect;
 export type Adoption = typeof adoptions.$inferSelect;
+export type UserAchievement = typeof userAchievements.$inferSelect;
 
 export const onlineStatusOptions = ["online", "offline", "busy"] as const;
 
