@@ -1368,7 +1368,7 @@ export async function registerRoutes(
       if (await isProtectedOwner(bar.userId)) {
         return res.status(403).json({ message: "Cannot moderate owner's content" });
       }
-      const success = await storage.deleteBarAdmin(req.params.id);
+      const success = await storage.deleteBarAdmin(req.params.id, req.user!.id);
       if (!success) {
         return res.status(404).json({ message: "Bar not found" });
       }
@@ -1399,8 +1399,8 @@ export async function registerRoutes(
       const userId = bar.userId;
       const barContent = bar.content.length > 50 ? bar.content.substring(0, 50) + "..." : bar.content;
 
-      // Delete the bar
-      const success = await storage.deleteBarAdmin(req.params.id);
+      // Soft delete the bar with reason
+      const success = await storage.deleteBarAdmin(req.params.id, req.user!.id, reason.trim());
       if (!success) {
         return res.status(404).json({ message: "Failed to remove bar" });
       }
@@ -1695,6 +1695,28 @@ export async function registerRoutes(
     try {
       await storage.clearMaintenance();
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin archive routes (soft-deleted bars)
+  app.get("/api/admin/archive", isAdmin, async (req, res) => {
+    try {
+      const deletedBars = await storage.getDeletedBars();
+      res.json(deletedBars);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/archive/:id/restore", isAdmin, async (req, res) => {
+    try {
+      const bar = await storage.restoreBar(req.params.id);
+      if (!bar) {
+        return res.status(404).json({ message: "Bar not found in archive" });
+      }
+      res.json(bar);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
