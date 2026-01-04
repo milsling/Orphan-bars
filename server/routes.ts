@@ -1116,12 +1116,18 @@ export async function registerRoutes(
 
   app.patch("/api/users/me", isAuthenticated, async (req, res) => {
     try {
-      const { bio, location, avatarUrl } = req.body;
+      const { bio, location, avatarUrl, messagePrivacy } = req.body;
       const updates: Record<string, any> = {};
       
       if (bio !== undefined) updates.bio = bio;
       if (location !== undefined) updates.location = location;
       if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+      if (messagePrivacy !== undefined) {
+        if (!["friends_only", "everyone"].includes(messagePrivacy)) {
+          return res.status(400).json({ message: "Invalid privacy setting" });
+        }
+        updates.messagePrivacy = messagePrivacy;
+      }
 
       const user = await storage.updateUser(req.user!.id, updates);
       
@@ -1534,10 +1540,20 @@ export async function registerRoutes(
       if (!content || typeof content !== "string" || content.trim().length === 0) {
         return res.status(400).json({ message: "Message content required" });
       }
-      const friendshipStatus = await storage.getFriendshipStatus(req.user!.id, req.params.receiverId);
-      if (!friendshipStatus || friendshipStatus.status !== "accepted") {
-        return res.status(403).json({ message: "You can only message friends" });
+      
+      const receiver = await storage.getUser(req.params.receiverId);
+      if (!receiver) {
+        return res.status(404).json({ message: "User not found" });
       }
+      
+      const messagePrivacy = receiver.messagePrivacy || "friends_only";
+      if (messagePrivacy === "friends_only") {
+        const friendshipStatus = await storage.getFriendshipStatus(req.user!.id, req.params.receiverId);
+        if (!friendshipStatus || friendshipStatus.status !== "accepted") {
+          return res.status(403).json({ message: "This user only accepts messages from friends" });
+        }
+      }
+      
       const message = await storage.sendMessage(req.user!.id, req.params.receiverId, content.trim());
       await storage.createNotification({
         userId: req.params.receiverId,

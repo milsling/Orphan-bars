@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Camera, Loader2, Lock, AtSign } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ArrowLeft, Camera, Loader2, Lock, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,7 @@ export default function EditProfile() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [messagePrivacy, setMessagePrivacy] = useState(currentUser?.messagePrivacy || "friends_only");
 
   const canChangeUsername = () => {
     if (!currentUser?.usernameChangedAt) return true;
@@ -99,6 +101,24 @@ export default function EditProfile() {
       toast({
         title: "Password change failed",
         description: error.message || "Could not change password",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePrivacyMutation = useMutation({
+    mutationFn: (privacy: string) => api.updateProfile({ messagePrivacy: privacy }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      toast({
+        title: "Privacy updated",
+        description: "Your message privacy setting has been saved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update failed",
+        description: error.message || "Could not update privacy setting",
         variant: "destructive",
       });
     },
@@ -370,6 +390,44 @@ export default function EditProfile() {
             >
               {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card/50 backdrop-blur-sm mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Message Privacy
+            </CardTitle>
+            <CardDescription>Control who can send you direct messages</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={messagePrivacy}
+              onValueChange={(value) => {
+                setMessagePrivacy(value);
+                updatePrivacyMutation.mutate(value);
+              }}
+              className="space-y-3"
+            >
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="friends_only" id="friends_only" data-testid="radio-friends-only" />
+                <Label htmlFor="friends_only" className="cursor-pointer">
+                  <span className="font-medium">Friends only</span>
+                  <p className="text-sm text-muted-foreground">Only accepted friends can message you</p>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="everyone" id="everyone" data-testid="radio-everyone" />
+                <Label htmlFor="everyone" className="cursor-pointer">
+                  <span className="font-medium">Everyone</span>
+                  <p className="text-sm text-muted-foreground">Any user can send you a message</p>
+                </Label>
+              </div>
+            </RadioGroup>
+            {updatePrivacyMutation.isPending && (
+              <p className="text-xs text-muted-foreground mt-2">Saving...</p>
+            )}
           </CardContent>
         </Card>
       </main>

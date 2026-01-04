@@ -7,8 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useLocation, useParams } from "wouter";
-import { MessageCircle, Send, ArrowLeft, Circle, Wifi, WifiOff } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Users, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useBars } from "@/context/BarContext";
 import { formatTimestamp } from "@/lib/formatDate";
@@ -51,6 +52,19 @@ export default function Messages() {
     staleTime: 30000,
     refetchOnWindowFocus: false,
   });
+
+  const { data: friends = [], isLoading: loadingFriends } = useQuery({
+    queryKey: ['friends'],
+    queryFn: async () => {
+      const res = await fetch('/api/friends', { credentials: 'include' });
+      return res.json();
+    },
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+  });
+
+  const conversationUserIds = new Set(conversations.map((c: any) => c.user.id));
+  const friendsNotInConversation = friends.filter((f: any) => !conversationUserIds.has(f.id));
 
   const { data: chatMessages = [], isLoading: loadingMessages, refetch: refetchMessages } = useQuery({
     queryKey: ['messages', selectedUserId],
@@ -145,52 +159,99 @@ export default function Messages() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-200px)] md:h-[600px]">
           <Card className="md:col-span-1 overflow-hidden">
-            <CardContent className="p-0">
-              <ScrollArea className="h-full">
-                {loadingConversations ? (
-                  <p className="p-4 text-center text-muted-foreground">Loading...</p>
-                ) : conversations.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <p className="text-sm">No conversations yet</p>
-                    <Link href="/friends">
-                      <Button variant="link" size="sm" className="mt-2">
-                        Find friends to chat with
-                      </Button>
-                    </Link>
-                  </div>
-                ) : (
-                  conversations.map((conv: any) => (
-                    <button
-                      key={conv.user.id}
-                      className={`w-full p-3 flex items-center gap-3 hover:bg-accent transition-colors text-left border-b ${selectedUserId === conv.user.id ? 'bg-accent' : ''}`}
-                      onClick={() => setLocation(`/messages/${conv.user.id}`)}
-                    >
-                      <div className="relative">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={conv.user.avatarUrl || undefined} />
-                          <AvatarFallback>{conv.user.username[0].toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${getStatusColor(conv.user.onlineStatus)} border-2 border-background`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-sm truncate">@{conv.user.username}</p>
-                          {conv.unreadCount > 0 && (
-                            <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
-                              {conv.unreadCount}
-                            </Badge>
-                          )}
+            <Tabs defaultValue="chats" className="h-full flex flex-col">
+              <TabsList className="w-full rounded-none border-b shrink-0">
+                <TabsTrigger value="chats" className="flex-1 gap-1">
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Chats
+                </TabsTrigger>
+                <TabsTrigger value="friends" className="flex-1 gap-1">
+                  <Users className="h-3.5 w-3.5" />
+                  Friends
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="chats" className="flex-1 m-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                  {loadingConversations ? (
+                    <p className="p-4 text-center text-muted-foreground">Loading...</p>
+                  ) : conversations.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      <p className="text-sm">No conversations yet</p>
+                      <p className="text-xs mt-1">Start chatting with a friend!</p>
+                    </div>
+                  ) : (
+                    conversations.map((conv: any) => (
+                      <button
+                        key={conv.user.id}
+                        className={`w-full p-3 flex items-center gap-3 hover:bg-accent transition-colors text-left border-b ${selectedUserId === conv.user.id ? 'bg-accent' : ''}`}
+                        onClick={() => setLocation(`/messages/${conv.user.id}`)}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={conv.user.avatarUrl || undefined} />
+                            <AvatarFallback>{conv.user.username[0].toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${getStatusColor(conv.user.onlineStatus)} border-2 border-background`} />
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {conv.lastMessage.senderId === currentUser.id ? 'You: ' : ''}
-                          {conv.lastMessage.content.slice(0, 30)}
-                        </p>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </ScrollArea>
-            </CardContent>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm truncate">@{conv.user.username}</p>
+                            {conv.unreadCount > 0 && (
+                              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                                {conv.unreadCount}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {conv.lastMessage.senderId === currentUser.id ? 'You: ' : ''}
+                            {conv.lastMessage.content.slice(0, 30)}
+                          </p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </ScrollArea>
+              </TabsContent>
+              <TabsContent value="friends" className="flex-1 m-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                  {loadingFriends ? (
+                    <p className="p-4 text-center text-muted-foreground">Loading...</p>
+                  ) : friends.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      <p className="text-sm">No friends yet</p>
+                      <Link href="/friends">
+                        <Button variant="link" size="sm" className="mt-2">
+                          Find friends
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    friends.map((friend: any) => (
+                      <button
+                        key={friend.id}
+                        className={`w-full p-3 flex items-center gap-3 hover:bg-accent transition-colors text-left border-b ${selectedUserId === friend.id ? 'bg-accent' : ''}`}
+                        onClick={() => setLocation(`/messages/${friend.id}`)}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={friend.avatarUrl || undefined} />
+                            <AvatarFallback>{friend.username[0].toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${getStatusColor(friend.onlineStatus)} border-2 border-background`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">@{friend.username}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{friend.onlineStatus || 'offline'}</p>
+                        </div>
+                        {conversationUserIds.has(friend.id) && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5">Chat</Badge>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
           </Card>
 
           <Card className="md:col-span-2 flex flex-col overflow-hidden">

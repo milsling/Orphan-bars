@@ -5,6 +5,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const permissionStatusOptions = ["share_only", "open_adopt", "private"] as const;
+export const messagePrivacyOptions = ["friends_only", "everyone"] as const;
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -22,6 +23,7 @@ export const users = pgTable("users", {
   usernameChangedAt: timestamp("username_changed_at"),
   onlineStatus: text("online_status").notNull().default("offline"),
   lastSeenAt: timestamp("last_seen_at"),
+  messagePrivacy: text("message_privacy").notNull().default("friends_only"),
 });
 
 export const verificationCodes = pgTable("verification_codes", {

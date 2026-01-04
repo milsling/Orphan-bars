@@ -214,17 +214,17 @@ export default function UserProfile() {
           Back to Feed
         </Button>
 
-        <div className="bg-card rounded-lg p-6 mb-6 border">
-          <div className="flex items-start gap-4">
-            <Avatar className="h-20 w-20">
+        <div className="bg-card rounded-lg p-4 md:p-6 mb-6 border">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <Avatar className="h-20 w-20 shrink-0">
               <AvatarImage src={user.avatarUrl || undefined} />
               <AvatarFallback className="text-2xl">
                 {user.username.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold" data-testid="text-username">
+            <div className="flex-1 min-w-0 text-center sm:text-left w-full">
+              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                <h1 className="text-xl md:text-2xl font-bold" data-testid="text-username">
                   @{user.username}
                 </h1>
                 {user.membershipTier !== "free" && (
@@ -235,7 +235,7 @@ export default function UserProfile() {
                 )}
               </div>
               {user.location && (
-                <p className="text-muted-foreground flex items-center gap-1 mt-1">
+                <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-1 mt-1">
                   <MapPin className="h-4 w-4" />
                   {user.location}
                 </p>
@@ -243,7 +243,7 @@ export default function UserProfile() {
               {user.bio && (
                 <p className="mt-2 text-sm">{user.bio}</p>
               )}
-              <div className="flex gap-6 mt-4 text-sm">
+              <div className="flex justify-center sm:justify-start gap-6 mt-4 text-sm">
                 <div>
                   <span className="font-bold">{stats?.barsCount || bars.length}</span>
                   <span className="text-muted-foreground ml-1">Bars</span>
@@ -257,7 +257,10 @@ export default function UserProfile() {
                   <span className="text-muted-foreground ml-1">Following</span>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4 flex-wrap">
+            </div>
+          </div>
+          {/* Action buttons in separate section to prevent overlap */}
+          <div className="flex justify-center sm:justify-start gap-2 mt-4 flex-wrap">
                 {!isOwnProfile && currentUser && (
                   <>
                     <Button
@@ -308,17 +311,15 @@ export default function UserProfile() {
                     )}
                   </>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShare}
-                  data-testid="button-share-profile"
-                >
-                  <Share2 className="h-4 w-4 mr-1" />
-                  Share
-                </Button>
-              </div>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              data-testid="button-share-profile"
+            >
+              <Share2 className="h-4 w-4 mr-1" />
+              Share
+            </Button>
           </div>
         </div>
 
