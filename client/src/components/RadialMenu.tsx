@@ -154,11 +154,9 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
                       )} />
                       {item.badge && item.badge > 0 && (
                         <span className={cn(
-                          "absolute -top-2 -right-2 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white",
+                          "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-pulse",
                           item.badgeColor || "bg-primary"
-                        )}>
-                          {item.badge > 99 ? '99+' : item.badge}
-                        </span>
+                        )} />
                       )}
                     </div>
                   </div>
