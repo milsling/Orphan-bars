@@ -10,8 +10,6 @@ import {
   Bookmark, 
   Shield,
   LogIn,
-  Flame,
-  TrendingUp,
   Grid3X3,
   X,
   Search
@@ -23,11 +21,9 @@ import { useUnreadMessagesCount, usePendingFriendRequestsCount } from "@/compone
 
 interface BottomNavProps {
   onNewMessage?: () => void;
-  activeFilter?: string;
-  onFilterChange?: (filter: string) => void;
 }
 
-export function BottomNav({ onNewMessage, activeFilter = "featured", onFilterChange }: BottomNavProps) {
+export function BottomNav({ onNewMessage }: BottomNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [location, setLocation] = useLocation();
@@ -190,17 +186,17 @@ export function BottomNav({ onNewMessage, activeFilter = "featured", onFilterCha
             </button>
 
             <button
-              onClick={() => onFilterChange?.("featured")}
+              onClick={() => setLocation("/")}
               className={cn(
                 "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors flex-1",
-                activeFilter === "featured" 
+                location === "/" 
                   ? "text-primary" 
                   : "text-muted-foreground hover:text-foreground"
               )}
-              data-testid="filter-featured"
+              data-testid="nav-feed"
             >
-              <Flame className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Featured</span>
+              <Home className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Feed</span>
             </button>
 
             <div className="relative -mt-6">
@@ -229,28 +225,14 @@ export function BottomNav({ onNewMessage, activeFilter = "featured", onFilterCha
             </div>
 
             <button
-              onClick={() => onFilterChange?.("top")}
+              onClick={() => setLocation("/saved")}
               className={cn(
                 "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors flex-1",
-                activeFilter === "top" 
+                location === "/saved" 
                   ? "text-primary" 
                   : "text-muted-foreground hover:text-foreground"
               )}
-              data-testid="filter-top"
-            >
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Top</span>
-            </button>
-
-            <button
-              onClick={() => onFilterChange?.("categories")}
-              className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors flex-1",
-                activeFilter === "categories" 
-                  ? "text-primary" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              data-testid="filter-categories"
+              data-testid="nav-saved"
             >
               <Bookmark className="w-5 h-5" />
               <span className="text-[10px] font-medium">Saved</span>
