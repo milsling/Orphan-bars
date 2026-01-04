@@ -119,9 +119,9 @@ Preferred communication style: Simple, everyday language.
 - **Friendship Status**: Displayed on profile (Add Friend / Pending / Message buttons)
 
 ### Direct Messaging
-- **Messages Page**: `/messages` - Conversation list with unread counts
+- **Messages Page**: `/messages` - Conversation list with unread counts, tabbed sidebar (Chats/Friends)
 - **Chat Interface**: Real-time messaging with message history
-- **Friends Only**: Can only message accepted friends
+- **Privacy Settings**: Users can choose who can message them (friends_only or everyone)
 - **Read Receipts**: Messages marked as read when conversation opened
 - **Notifications**: New message notifications
 
