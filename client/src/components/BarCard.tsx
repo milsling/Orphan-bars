@@ -203,18 +203,35 @@ export default function BarCard({ bar }: BarCardProps) {
 
   const likeMutation = useMutation({
     mutationFn: () => api.toggleLike(bar.id),
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['likes', bar.id] });
+      const previousLikes = queryClient.getQueryData<{ count: number; liked: boolean }>(['likes', bar.id]);
+      const newLiked = !previousLikes?.liked;
+      const newCount = (previousLikes?.count || 0) + (newLiked ? 1 : -1);
+      queryClient.setQueryData(['likes', bar.id], { count: Math.max(0, newCount), liked: newLiked });
+      if (newLiked) {
+        const previousDislikes = queryClient.getQueryData<{ count: number; disliked: boolean }>(['dislikes', bar.id]);
+        if (previousDislikes?.disliked) {
+          queryClient.setQueryData(['dislikes', bar.id], { count: Math.max(0, previousDislikes.count - 1), disliked: false });
+        }
+      }
+      return { previousLikes };
+    },
+    onError: (error: any, _, context) => {
+      if (context?.previousLikes) {
+        queryClient.setQueryData(['likes', bar.id], context.previousLikes);
+      }
+      if (error.message.includes("Not authenticated")) {
+        toast({ title: "Login required", description: "You need to be logged in to like posts", variant: "destructive" });
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['likes', bar.id] });
       queryClient.invalidateQueries({ queryKey: ['dislikes', bar.id] });
       queryClient.invalidateQueries({ queryKey: ['bars'] });
       queryClient.invalidateQueries({ queryKey: ['bars-featured'] });
       queryClient.invalidateQueries({ queryKey: ['bars-top'] });
       queryClient.invalidateQueries({ queryKey: ['bars-trending'] });
-    },
-    onError: (error: any) => {
-      if (error.message.includes("Not authenticated")) {
-        toast({ title: "Login required", description: "You need to be logged in to like posts", variant: "destructive" });
-      }
     },
   });
 

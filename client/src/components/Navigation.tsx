@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, Plus, LogIn, Shield, Bookmark, Users, MessageCircle } from "lucide-react";
+import { Home, User, Plus, LogIn, Shield, Bookmark, MessageCircle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBars } from "@/context/BarContext";
 import { Button } from "@/components/ui/button";
@@ -58,11 +58,11 @@ export default function Navigation() {
           <SearchBar className="w-64" />
         </div>
         
-        <div className="flex items-center gap-4">
-          {/* Left nav items */}
+        <div className="flex items-center gap-2">
+          {/* Main nav items */}
           <Link href="/">
             <div className={cn(
-              "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer",
               location === "/" ? "text-primary" : "text-muted-foreground"
             )}>
               <Home className="h-4 w-4" />
@@ -74,7 +74,7 @@ export default function Navigation() {
             <>
               <Link href="/messages">
                 <div className={cn(
-                  "relative flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer",
                   location === "/messages" ? "text-primary" : "text-muted-foreground",
                   unreadCount > 0 && location !== "/messages" && "text-primary"
                 )}>
@@ -93,7 +93,7 @@ export default function Navigation() {
               {/* Prominent Drop Bar button */}
               <Link href="/post">
                 <div className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-bold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20",
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary text-primary-foreground font-bold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20",
                   location === "/post" && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                 )}>
                   <Plus className="h-4 w-4" />
@@ -101,45 +101,41 @@ export default function Navigation() {
                 </div>
               </Link>
               
+              {/* Icon-only buttons for cleaner look */}
               <Link href="/saved">
                 <div className={cn(
-                  "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                  "p-2 rounded-md transition-colors hover:bg-muted cursor-pointer",
                   location === "/saved" ? "text-primary" : "text-muted-foreground"
-                )}>
+                )} title="Saved">
                   <Bookmark className="h-4 w-4" />
-                  Saved
                 </div>
               </Link>
               
               <Link href="/profile">
                 <div className={cn(
-                  "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                  "p-2 rounded-md transition-colors hover:bg-muted cursor-pointer",
                   location === "/profile" ? "text-primary" : "text-muted-foreground"
-                )}>
+                )} title="Profile">
                   <User className="h-4 w-4" />
-                  Profile
                 </div>
               </Link>
               
               {currentUser.isAdmin && (
                 <Link href="/admin">
                   <div className={cn(
-                    "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
+                    "p-2 rounded-md transition-colors hover:bg-muted cursor-pointer",
                     location === "/admin" ? "text-primary" : "text-muted-foreground"
-                  )}>
+                  )} title="Admin">
                     <Shield className="h-4 w-4" />
-                    Admin
                   </div>
                 </Link>
               )}
+              
+              <NotificationBell />
             </>
           )}
           
-          {currentUser && <NotificationBell />}
-          
           <OnlineStatusIndicator />
-          
-          <ThemeToggle />
           
           {!currentUser && (
             <Link href="/auth">
@@ -169,31 +165,8 @@ export default function Navigation() {
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background/90 backdrop-blur-lg z-50 pb-safe">
-        <div className="relative h-full flex items-center justify-between px-6">
-          {/* Left side items */}
-          <div className="flex items-center gap-6">
-            {mobileLeftItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <div className={cn(
-                  "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
-                  location === item.path ? "text-primary" : "text-muted-foreground",
-                  item.path === "/messages" && unreadCount > 0 && location !== "/messages" && "text-primary"
-                )}>
-                  <div className="relative">
-                    <item.icon className="h-5 w-5" />
-                    {item.path === "/messages" && unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1.5 min-w-[12px] h-3 px-0.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[9px] font-medium">{item.label}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Center Drop Bar button */}
+        <div className="relative h-full flex items-center justify-center">
+          {/* Center Drop Bar button - raised above the bar */}
           {currentUser ? (
             <Link href="/post">
               <div className="absolute left-1/2 -translate-x-1/2 -top-5">
@@ -215,8 +188,33 @@ export default function Navigation() {
             </Link>
           )}
 
-          {/* Right side items */}
-          <div className="flex items-center gap-6">
+          {/* Nav items clustered around center */}
+          <div className="flex items-center gap-8">
+            {/* Left items */}
+            {mobileLeftItems.map((item) => (
+              <Link key={item.path} href={item.path}>
+                <div className={cn(
+                  "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
+                  location === item.path ? "text-primary" : "text-muted-foreground",
+                  item.path === "/messages" && unreadCount > 0 && location !== "/messages" && "text-primary"
+                )}>
+                  <div className="relative">
+                    <item.icon className="h-5 w-5" />
+                    {item.path === "/messages" && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1.5 min-w-[12px] h-3 px-0.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[9px] font-medium">{item.label}</span>
+                </div>
+              </Link>
+            ))}
+            
+            {/* Spacer for center button */}
+            <div className="w-14" />
+            
+            {/* Right items */}
             {currentUser ? (
               <>
                 {mobileRightItems.map((item) => (
@@ -243,17 +241,15 @@ export default function Navigation() {
                 )}
               </>
             ) : (
-              <>
-                <Link href="/auth">
-                  <div className={cn(
-                    "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
-                    location === "/auth" ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    <LogIn className="h-5 w-5" />
-                    <span className="text-[9px] font-medium">Login</span>
-                  </div>
-                </Link>
-              </>
+              <Link href="/auth">
+                <div className={cn(
+                  "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
+                  location === "/auth" ? "text-primary" : "text-muted-foreground"
+                )}>
+                  <LogIn className="h-5 w-5" />
+                  <span className="text-[9px] font-medium">Login</span>
+                </div>
+              </Link>
             )}
           </div>
         </div>
