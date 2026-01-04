@@ -93,43 +93,17 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
     }
   };
 
-  const radius = 120;
-  const innerRadius = 40;
+  const radius = 100;
 
-  const getSliceAngles = (index: number, total: number) => {
-    const sliceAngle = 180 / total;
-    const startAngle = 180 + (index * sliceAngle);
-    const endAngle = startAngle + sliceAngle;
-    const midAngle = (startAngle + endAngle) / 2;
-    return { startAngle, endAngle, midAngle };
-  };
-
-  const getIconPosition = (index: number, total: number) => {
-    const { midAngle } = getSliceAngles(index, total);
-    const midRad = (midAngle * Math.PI) / 180;
-    const iconRadius = (radius + innerRadius) / 2;
+  const getItemPosition = (index: number, total: number) => {
+    const angleSpread = 180;
+    const angleStep = angleSpread / (total + 1);
+    const angle = 180 + angleStep * (index + 1);
+    const rad = (angle * Math.PI) / 180;
     return {
-      x: Math.cos(midRad) * iconRadius,
-      y: Math.sin(midRad) * iconRadius,
+      x: Math.cos(rad) * radius,
+      y: Math.sin(rad) * radius,
     };
-  };
-
-  const getSlicePath = (index: number, total: number) => {
-    const { startAngle, endAngle } = getSliceAngles(index, total);
-    
-    const startRad = (startAngle * Math.PI) / 180;
-    const endRad = (endAngle * Math.PI) / 180;
-    
-    const x1 = Math.cos(startRad) * radius;
-    const y1 = Math.sin(startRad) * radius;
-    const x2 = Math.cos(endRad) * radius;
-    const y2 = Math.sin(endRad) * radius;
-    const x3 = Math.cos(endRad) * innerRadius;
-    const y3 = Math.sin(endRad) * innerRadius;
-    const x4 = Math.cos(startRad) * innerRadius;
-    const y4 = Math.sin(startRad) * innerRadius;
-    
-    return `M ${x4} ${y4} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 0 0 ${x4} ${y4} Z`;
   };
 
   return (
@@ -148,94 +122,81 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
       </AnimatePresence>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
-        <div className="relative h-48 flex items-end justify-center pb-4">
+        <div className="relative flex items-end justify-center pb-4" style={{ height: radius + 80 }}>
           <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                className="absolute bottom-8 pointer-events-auto"
-              >
-                <svg 
-                  width={radius * 2 + 20} 
-                  height={radius + 20} 
-                  viewBox={`${-radius - 10} ${-radius - 10} ${radius * 2 + 20} ${radius + 20}`}
-                  className="overflow-visible"
+            {isOpen && menuItems.map((item, index) => {
+              const pos = getItemPosition(index, menuItems.length);
+              const isHovered = hoveredIndex === index;
+              const isActive = item.path && location === item.path;
+              const isCenter = item.isCenter;
+
+              return (
+                <motion.button
+                  key={item.path || item.label}
+                  initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1, 
+                    x: pos.x, 
+                    y: pos.y 
+                  }}
+                  exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 400, 
+                    damping: 25,
+                    delay: index * 0.03 
+                  }}
+                  onClick={() => handleItemClick(item)}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                  onTouchStart={() => setHoveredIndex(index)}
+                  onTouchEnd={() => setHoveredIndex(null)}
+                  className={cn(
+                    "absolute bottom-8 pointer-events-auto",
+                    "flex flex-col items-center gap-1"
+                  )}
+                  data-testid={`radial-item-${item.label.toLowerCase().replace(' ', '-')}`}
                 >
-                  {menuItems.map((item, index) => {
-                    const iconPos = getIconPosition(index, menuItems.length);
-                    const isHovered = hoveredIndex === index;
-                    const isActive = item.path && location === item.path;
-                    const isCenter = item.isCenter;
-                    
-                    return (
-                      <g key={item.path || item.label}>
-                        <motion.path
-                          d={getSlicePath(index, menuItems.length)}
-                          initial={{ opacity: 0 }}
-                          animate={{ 
-                            opacity: 1,
-                            scale: isHovered ? 1.05 : 1,
-                          }}
-                          className={cn(
-                            "cursor-pointer transition-colors duration-150",
-                            isCenter 
-                              ? "fill-primary/30 stroke-primary stroke-2"
-                              : isActive 
-                                ? "fill-primary/40 stroke-primary stroke-2" 
-                                : isHovered 
-                                  ? "fill-primary/20 stroke-primary stroke-2"
-                                  : "fill-card/90 stroke-primary/50 stroke-1"
-                          )}
-                          onClick={() => handleItemClick(item)}
-                          onMouseEnter={() => setHoveredIndex(index)}
-                          onMouseLeave={() => setHoveredIndex(null)}
-                          onTouchStart={() => setHoveredIndex(index)}
-                          onTouchEnd={() => setHoveredIndex(null)}
-                        />
-                        <g 
-                          transform={`translate(${iconPos.x}, ${iconPos.y})`}
-                          className="pointer-events-none"
-                        >
-                          <foreignObject 
-                            x={-24} 
-                            y={-24} 
-                            width={48} 
-                            height={48}
-                            style={{ overflow: 'visible' }}
-                          >
-                            <div className="flex flex-col items-center justify-center w-full h-full">
-                              <div className="relative flex items-center justify-center">
-                                <item.icon 
-                                  className={cn(
-                                    "transition-all duration-150",
-                                    isCenter ? "w-7 h-7" : "w-6 h-6",
-                                    isActive || isCenter ? "text-primary" : isHovered ? "text-primary" : "text-foreground"
-                                  )} 
-                                />
-                                {item.badge && item.badge > 0 && (
-                                  <span className={cn(
-                                    "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-pulse",
-                                    item.badgeColor || "bg-primary"
-                                  )} />
-                                )}
-                              </div>
-                              {isHovered && (
-                                <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-card/95 border border-primary/50 rounded text-[10px] font-logo text-primary whitespace-nowrap shadow-lg">
-                                  {item.label}
-                                </span>
-                              )}
-                            </div>
-                          </foreignObject>
-                        </g>
-                      </g>
-                    );
-                  })}
-                </svg>
-              </motion.div>
-            )}
+                  <div className={cn(
+                    "rounded-full flex items-center justify-center",
+                    "border-2 shadow-lg transition-all duration-150",
+                    isCenter ? "w-16 h-16" : "w-14 h-14",
+                    isCenter 
+                      ? "bg-primary/20 border-primary shadow-primary/30"
+                      : isActive
+                        ? "bg-primary border-primary shadow-primary/30"
+                        : isHovered
+                          ? "bg-primary/20 border-primary shadow-primary/30"
+                          : "bg-card/95 border-primary/50 shadow-primary/20",
+                    isHovered && "scale-110"
+                  )}>
+                    <div className="relative">
+                      <item.icon className={cn(
+                        "transition-all duration-150",
+                        isCenter ? "w-7 h-7" : "w-6 h-6",
+                        isActive ? "text-primary-foreground" : isCenter || isHovered ? "text-primary" : "text-foreground"
+                      )} />
+                      {item.badge && item.badge > 0 && (
+                        <span className={cn(
+                          "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full animate-pulse",
+                          item.badgeColor || "bg-primary"
+                        )} />
+                      )}
+                    </div>
+                  </div>
+                  {isHovered && (
+                    <motion.span 
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="px-2 py-0.5 bg-card/95 border border-primary/50 rounded text-[10px] font-logo text-primary whitespace-nowrap shadow-lg"
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </motion.button>
+              );
+            })}
           </AnimatePresence>
 
           <motion.button
