@@ -85,21 +85,23 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed bottom-20 left-4 right-4 z-50 bg-card border border-border rounded-2xl p-6 shadow-2xl"
             >
-              <button
-                onClick={() => handleNavClick("/post")}
-                className="w-full mb-4 p-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all active:scale-[0.98]"
-                data-testid="nav-item-drop-bar-main"
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                    <Plus className="w-7 h-7 text-primary-foreground" />
+              {currentUser && (
+                <button
+                  onClick={() => handleNavClick("/post")}
+                  className="w-full mb-4 p-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all active:scale-[0.98]"
+                  data-testid="nav-item-drop-bar-main"
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                      <Plus className="w-7 h-7 text-primary-foreground" />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-lg font-bold text-primary-foreground block">Drop Bar</span>
+                      <span className="text-xs text-primary-foreground/70">Share your bars with the world</span>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <span className="text-lg font-bold text-primary-foreground block">Drop Bar</span>
-                    <span className="text-xs text-primary-foreground/70">Share your bars with the world</span>
-                  </div>
-                </div>
-              </button>
+                </button>
+              )}
               
               <div className="grid grid-cols-3 gap-3">
                 {navItems.map((item) => {
