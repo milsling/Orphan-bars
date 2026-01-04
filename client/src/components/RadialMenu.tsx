@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -32,14 +32,22 @@ interface RadialMenuProps {
   onNewMessage?: () => void;
 }
 
+type GestureState = 'idle' | 'pressing' | 'tracking';
+
 export function RadialMenu({ onNewMessage }: RadialMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [gestureState, setGestureState] = useState<GestureState>('idle');
   const [location, setLocation] = useLocation();
   const { currentUser } = useBars();
   const unreadCount = useUnreadMessagesCount();
   const pendingFriendRequests = usePendingFriendRequestsCount();
   const isOnMessagesPage = location.startsWith("/messages");
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const pressStartTime = useRef<number>(0);
+  const buttonCenter = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
     if (isOpen) {
@@ -86,6 +94,8 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
 
   const handleItemClick = (item: RadialMenuItem) => {
     setIsOpen(false);
+    setGestureState('idle');
+    setHoveredIndex(null);
     if (item.action) {
       setTimeout(() => item.action!(), 150);
     } else if (item.path) {
@@ -104,8 +114,101 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
     return {
       x: Math.cos(rad) * radius,
       y: Math.sin(rad) * radius,
+      angle,
     };
   };
+
+  const findHoveredItem = useCallback((touchX: number, touchY: number): number | null => {
+    if (!buttonRef.current) return null;
+    
+    const dx = touchX - buttonCenter.current.x;
+    const dy = touchY - buttonCenter.current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance < 40 || distance > radius + 50) return null;
+    
+    let closestIndex: number | null = null;
+    let closestDistance = Infinity;
+    
+    menuItems.forEach((_, index) => {
+      const pos = getItemPosition(index, menuItems.length);
+      const itemX = buttonCenter.current.x + pos.x;
+      const itemY = buttonCenter.current.y + pos.y;
+      const itemDist = Math.sqrt((touchX - itemX) ** 2 + (touchY - itemY) ** 2);
+      
+      if (itemDist < closestDistance && itemDist < 60) {
+        closestDistance = itemDist;
+        closestIndex = index;
+      }
+    });
+    
+    return closestIndex;
+  }, [menuItems.length]);
+
+  const updateButtonCenter = useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      buttonCenter.current = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    }
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    pressStartTime.current = Date.now();
+    updateButtonCenter();
+    setGestureState('pressing');
+    setIsOpen(true);
+    
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+  }, [updateButtonCenter]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (gestureState === 'idle') return;
+    e.preventDefault();
+    
+    setGestureState('tracking');
+    const touch = e.touches[0];
+    const newHovered = findHoveredItem(touch.clientX, touch.clientY);
+    
+    if (newHovered !== hoveredIndex) {
+      setHoveredIndex(newHovered);
+      if (newHovered !== null && navigator.vibrate) {
+        navigator.vibrate(5);
+      }
+    }
+  }, [gestureState, hoveredIndex, findHoveredItem]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    const pressDuration = Date.now() - pressStartTime.current;
+    
+    if (gestureState === 'tracking' && hoveredIndex !== null) {
+      handleItemClick(menuItems[hoveredIndex]);
+    } else if (pressDuration < 200 && gestureState === 'pressing') {
+      setGestureState('idle');
+    } else {
+      setIsOpen(false);
+      setGestureState('idle');
+      setHoveredIndex(null);
+    }
+  }, [gestureState, hoveredIndex, menuItems]);
+
+  const handleTouchCancel = useCallback(() => {
+    setIsOpen(false);
+    setGestureState('idle');
+    setHoveredIndex(null);
+  }, []);
+
+  const handleClick = useCallback(() => {
+    if (gestureState === 'idle') {
+      setIsOpen(prev => !prev);
+    }
+  }, [gestureState]);
 
   return (
     <>
@@ -117,12 +220,22 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-40"
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false);
+              setGestureState('idle');
+              setHoveredIndex(null);
+            }}
           />
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+      <div 
+        ref={containerRef}
+        className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none"
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
+      >
         <div className="relative flex items-end justify-center pb-4" style={{ height: radius + 80 }}>
           <AnimatePresence>
             {isOpen && menuItems.map((item, index) => {
@@ -137,7 +250,7 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
                   initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
                   animate={{ 
                     opacity: 1, 
-                    scale: 1, 
+                    scale: isHovered ? 1.3 : 1, 
                     x: pos.x, 
                     y: pos.y 
                   }}
@@ -146,13 +259,11 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
                     type: "spring", 
                     stiffness: 400, 
                     damping: 25,
-                    delay: index * 0.03 
+                    delay: index * 0.02 
                   }}
                   onClick={() => handleItemClick(item)}
                   onMouseEnter={() => setHoveredIndex(index)}
                   onMouseLeave={() => setHoveredIndex(null)}
-                  onTouchStart={() => setHoveredIndex(index)}
-                  onTouchEnd={() => setHoveredIndex(null)}
                   className={cn(
                     "absolute bottom-8 pointer-events-auto",
                     "flex flex-col items-center gap-1"
@@ -162,20 +273,19 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
                   <div className={cn(
                     "rounded-full flex items-center justify-center",
                     "border-2 shadow-lg transition-all duration-150",
-                    isCenter ? "w-16 h-16" : "w-14 h-14",
+                    isCenter ? "w-16 h-16" : isHovered ? "w-16 h-16" : "w-14 h-14",
                     isCenter 
                       ? "bg-primary/20 border-primary shadow-primary/30"
                       : isActive
                         ? "bg-primary border-primary shadow-primary/30"
                         : isHovered
-                          ? "bg-primary/20 border-primary shadow-primary/30"
-                          : "bg-card/95 border-primary/50 shadow-primary/20",
-                    isHovered && "scale-110"
+                          ? "bg-primary/30 border-primary shadow-primary/50 shadow-xl"
+                          : "bg-card/95 border-primary/50 shadow-primary/20"
                   )}>
                     <div className="relative">
                       <item.icon className={cn(
                         "transition-all duration-150",
-                        isCenter ? "w-7 h-7" : "w-6 h-6",
+                        isCenter || isHovered ? "w-7 h-7" : "w-6 h-6",
                         isActive ? "text-primary-foreground" : isCenter || isHovered ? "text-primary" : "text-foreground"
                       )} />
                       {item.badge && item.badge > 0 && (
@@ -186,24 +296,29 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
                       )}
                     </div>
                   </div>
-                  {isHovered && (
-                    <motion.span 
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="px-2 py-0.5 bg-card/95 border border-primary/50 rounded text-[10px] font-logo text-primary whitespace-nowrap shadow-lg"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
+                  <AnimatePresence>
+                    {isHovered && (
+                      <motion.span 
+                        initial={{ opacity: 0, y: -5, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -5, scale: 0.8 }}
+                        className="px-3 py-1 bg-card border border-primary rounded-lg text-xs font-logo text-primary whitespace-nowrap shadow-xl"
+                      >
+                        {item.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </motion.button>
               );
             })}
           </AnimatePresence>
 
           <motion.button
-            onClick={() => setIsOpen(!isOpen)}
+            ref={buttonRef}
+            onClick={handleClick}
+            onTouchStart={handleTouchStart}
             className={cn(
-              "relative pointer-events-auto",
+              "relative pointer-events-auto touch-none",
               "w-16 h-16 rounded-full",
               "bg-gradient-to-br from-primary to-primary/80",
               "flex items-center justify-center",
