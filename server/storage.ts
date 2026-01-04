@@ -97,6 +97,7 @@ export interface IStorage {
   // Friendship methods
   sendFriendRequest(requesterId: string, receiverId: string): Promise<Friendship>;
   acceptFriendRequest(friendshipId: string, userId: string): Promise<Friendship | undefined>;
+  createAutoFriendship(userId1: string, userId2: string): Promise<Friendship | null>;
   declineFriendRequest(friendshipId: string, userId: string): Promise<boolean>;
   removeFriend(userId: string, friendId: string): Promise<boolean>;
   getFriends(userId: string): Promise<Array<User & { friendshipId: string }>>;
@@ -808,6 +809,23 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(friendships.id, friendshipId), eq(friendships.receiverId, userId), eq(friendships.status, "pending")))
       .returning();
     return result;
+  }
+
+  async createAutoFriendship(userId1: string, userId2: string): Promise<Friendship | null> {
+    if (userId1 === userId2) return null;
+    const [existing] = await db.select().from(friendships).where(
+      or(
+        and(eq(friendships.requesterId, userId1), eq(friendships.receiverId, userId2)),
+        and(eq(friendships.requesterId, userId2), eq(friendships.receiverId, userId1))
+      )
+    );
+    if (existing) return null;
+    const [friendship] = await db.insert(friendships).values({
+      requesterId: userId1,
+      receiverId: userId2,
+      status: "accepted",
+    }).returning();
+    return friendship;
   }
 
   async declineFriendRequest(friendshipId: string, userId: string): Promise<boolean> {

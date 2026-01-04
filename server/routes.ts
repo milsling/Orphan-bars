@@ -138,10 +138,11 @@ export async function registerRoutes(
       await storage.deleteVerificationCodes(email);
       const updatedUser = await storage.updateUser(user.id, { emailVerified: true });
 
-      // Auto-follow Milsling (creator)
+      // Auto-follow and auto-friend Milsling (creator)
       const milsling = await storage.getUserByUsername("Milsling");
       if (milsling && milsling.id !== user.id) {
         await storage.followUser(user.id, milsling.id);
+        await storage.createAutoFriendship(milsling.id, user.id);
       }
 
       const { password: _, ...userWithoutPassword } = updatedUser!;
@@ -181,10 +182,11 @@ export async function registerRoutes(
         password: hashedPassword,
       });
 
-      // Auto-follow Milsling (creator)
+      // Auto-follow and auto-friend Milsling (creator)
       const milsling = await storage.getUserByUsername("Milsling");
       if (milsling && milsling.id !== user.id) {
         await storage.followUser(user.id, milsling.id);
+        await storage.createAutoFriendship(milsling.id, user.id);
       }
 
       const { password: _, ...userWithoutPassword } = user;
