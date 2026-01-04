@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban, Flag, AlertTriangle, Eye, Wrench } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban, Flag, AlertTriangle, Eye, Wrench, Archive, RotateCcw } from "lucide-react";
 import { useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -300,6 +300,35 @@ export default function Admin() {
     },
   });
 
+  const { data: deletedBars = [], isLoading: isLoadingArchive } = useQuery<any[]>({
+    queryKey: ['admin', 'archive'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/archive', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch archive');
+      return res.json();
+    },
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  const restoreBarMutation = useMutation({
+    mutationFn: async (barId: string) => {
+      const res = await fetch(`/api/admin/archive/${barId}/restore`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to restore bar');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'archive'] });
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+      toast({ title: "Bar restored successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleModerate = () => {
     if (moderateBarId && moderateReason.trim()) {
       moderateBarMutation.mutate({ barId: moderateBarId, reason: moderateReason.trim() });
@@ -363,7 +392,7 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="moderation" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-6">
+          <TabsList className="grid w-full grid-cols-7 mb-6">
             <TabsTrigger value="moderation" className="gap-1 text-xs px-2">
               <Eye className="h-4 w-4" />
               <span className="hidden sm:inline">Review</span>
@@ -392,6 +421,15 @@ export default function Admin() {
               {maintenanceStatus?.isActive && (
                 <Badge variant="default" className="ml-1 text-xs bg-orange-500">
                   ON
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="archive" className="gap-1 text-xs px-2">
+              <Archive className="h-4 w-4" />
+              <span className="hidden sm:inline">Archive</span>
+              {deletedBars.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-xs">
+                  {deletedBars.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -711,6 +749,76 @@ export default function Admin() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="archive">
+            <Card className="border-border bg-card/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Archive className="h-5 w-5 text-purple-500" />
+                  Deleted Bars Archive
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingArchive ? (
+                  <p className="text-muted-foreground">Loading...</p>
+                ) : deletedBars.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Archive className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No deleted bars in archive.</p>
+                    <p className="text-sm">Deleted bars are preserved here for audit purposes.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {deletedBars.map((bar: any) => (
+                      <div key={bar.id} className="border border-border rounded-lg p-4 space-y-3 bg-secondary/20">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={bar.user?.avatarUrl || undefined} />
+                                <AvatarFallback>{bar.user?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium">@{bar.user?.username || 'Unknown'}</span>
+                              {bar.proofBarId && (
+                                <Badge variant="outline" className="text-xs font-mono">
+                                  {bar.proofBarId}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Deleted {bar.deletedAt ? new Date(bar.deletedAt).toLocaleDateString() : 'Unknown date'}
+                              {bar.deletedReason && (
+                                <span className="text-orange-400"> • Reason: {bar.deletedReason}</span>
+                              )}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-500 border-green-500 hover:bg-green-500/20"
+                            onClick={() => restoreBarMutation.mutate(bar.id)}
+                            disabled={restoreBarMutation.isPending}
+                            data-testid={`button-restore-bar-${bar.id}`}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-1" />
+                            Restore
+                          </Button>
+                        </div>
+                        <div className="border-l-2 border-muted pl-3 py-2">
+                          <p className="text-sm whitespace-pre-wrap">{stripHtml(bar.content)}</p>
+                        </div>
+                        {bar.explanation && (
+                          <p className="text-xs text-muted-foreground italic">
+                            Explanation: {bar.explanation}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
