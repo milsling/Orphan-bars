@@ -7,13 +7,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SearchBar } from "@/components/SearchBar";
 import { OnlineStatusIndicator } from "@/components/OnlineStatus";
-import { useUnreadMessagesCount } from "@/components/UnreadMessagesBadge";
+import { useUnreadMessagesCount, usePendingFriendRequestsCount } from "@/components/UnreadMessagesBadge";
 import iconUrl from "@/assets/icon.png";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { currentUser } = useBars();
   const unreadCount = useUnreadMessagesCount();
+  const pendingFriendRequests = usePendingFriendRequestsCount();
 
   const desktopNavItems = [
     { icon: Home, label: "Feed", path: "/" },
@@ -36,11 +37,11 @@ export default function Navigation() {
   // Mobile nav: 4 items around the edges, center button for Drop Bar
   const mobileLeftItems = [
     { icon: Home, label: "Feed", path: "/" },
-    ...(currentUser ? [{ icon: MessageCircle, label: "Messages", path: "/messages" }] : []),
+    ...(currentUser ? [{ icon: Users, label: "Friends", path: "/friends" }] : []),
   ];
   
   const mobileRightItems = [
-    { icon: Bookmark, label: "Saved", path: "/saved" },
+    ...(currentUser ? [{ icon: MessageCircle, label: "Messages", path: "/messages" }] : []),
     { icon: User, label: "Profile", path: "/profile" },
   ];
 
@@ -72,6 +73,24 @@ export default function Navigation() {
           
           {currentUser && (
             <>
+              <Link href="/friends">
+                <div className={cn(
+                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer",
+                  location === "/friends" ? "text-primary" : "text-muted-foreground",
+                  pendingFriendRequests > 0 && location !== "/friends" && "text-primary"
+                )}>
+                  <div className="relative">
+                    <Users className="h-4 w-4" />
+                    {pendingFriendRequests > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                        {pendingFriendRequests > 99 ? '99+' : pendingFriendRequests}
+                      </span>
+                    )}
+                  </div>
+                  Friends
+                </div>
+              </Link>
+              
               <Link href="/messages">
                 <div className={cn(
                   "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer",
@@ -196,13 +215,13 @@ export default function Navigation() {
                 <div className={cn(
                   "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
                   location === item.path ? "text-primary" : "text-muted-foreground",
-                  item.path === "/messages" && unreadCount > 0 && location !== "/messages" && "text-primary"
+                  item.path === "/friends" && pendingFriendRequests > 0 && location !== "/friends" && "text-primary"
                 )}>
                   <div className="relative">
                     <item.icon className="h-5 w-5" />
-                    {item.path === "/messages" && unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1.5 min-w-[12px] h-3 px-0.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
-                        {unreadCount > 99 ? '99+' : unreadCount}
+                    {item.path === "/friends" && pendingFriendRequests > 0 && (
+                      <span className="absolute -top-1 -right-1.5 min-w-[12px] h-3 px-0.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
+                        {pendingFriendRequests > 99 ? '99+' : pendingFriendRequests}
                       </span>
                     )}
                   </div>
@@ -221,9 +240,17 @@ export default function Navigation() {
                   <Link key={item.path} href={item.path}>
                     <div className={cn(
                       "flex flex-col items-center gap-0.5 transition-colors cursor-pointer",
-                      location === item.path ? "text-primary" : "text-muted-foreground"
+                      location === item.path ? "text-primary" : "text-muted-foreground",
+                      item.path === "/messages" && unreadCount > 0 && location !== "/messages" && "text-primary"
                     )}>
-                      <item.icon className="h-5 w-5" />
+                      <div className="relative">
+                        <item.icon className="h-5 w-5" />
+                        {item.path === "/messages" && unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1.5 min-w-[12px] h-3 px-0.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[9px] font-medium">{item.label}</span>
                     </div>
                   </Link>

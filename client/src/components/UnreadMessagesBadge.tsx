@@ -2,6 +2,24 @@ import { useQuery } from "@tanstack/react-query";
 import { useBars } from "@/context/BarContext";
 import { useEffect } from "react";
 
+export function usePendingFriendRequestsCount() {
+  const { currentUser } = useBars();
+  
+  const { data } = useQuery({
+    queryKey: ['pendingFriendRequestsCount'],
+    queryFn: async () => {
+      const res = await fetch('/api/friends/requests', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!currentUser,
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+
+  return Array.isArray(data) ? data.length : 0;
+}
+
 export function useUnreadMessagesCount() {
   const { currentUser } = useBars();
   
