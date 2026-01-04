@@ -255,6 +255,30 @@ export const userAchievementsRelations = relations(userAchievements, ({ one }) =
   user: one(users, { fields: [userAchievements.userId], references: [users.id] }),
 }));
 
+export const reportReasonOptions = ["illegal_content", "harassment", "spam", "other"] as const;
+export const reportStatusOptions = ["pending", "reviewed", "dismissed", "action_taken"] as const;
+
+export const reports = pgTable("reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reporterId: varchar("reporter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  barId: varchar("bar_id").references(() => bars.id, { onDelete: "cascade" }),
+  commentId: varchar("comment_id").references(() => comments.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  details: text("details"),
+  status: text("status").notNull().default("pending"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const reportsRelations = relations(reports, ({ one }) => ({
+  reporter: one(users, { fields: [reports.reporterId], references: [users.id] }),
+  bar: one(bars, { fields: [reports.barId], references: [bars.id] }),
+  comment: one(comments, { fields: [reports.commentId], references: [comments.id] }),
+  reviewedByUser: one(users, { fields: [reports.reviewedBy], references: [users.id] }),
+}));
+
 export const ACHIEVEMENTS = {
   first_bar: { name: "Origin Founder", emoji: "🔥", description: "Posted your first bar", threshold: { barsMinted: 1 } },
   bar_slinger: { name: "Bar Slinger", emoji: "💀", description: "Posted 10 bars", threshold: { barsMinted: 10 } },
@@ -320,6 +344,7 @@ export type Friendship = typeof friendships.$inferSelect;
 export type DirectMessage = typeof directMessages.$inferSelect;
 export type Adoption = typeof adoptions.$inferSelect;
 export type UserAchievement = typeof userAchievements.$inferSelect;
+export type Report = typeof reports.$inferSelect;
 
 export const onlineStatusOptions = ["online", "offline", "busy"] as const;
 

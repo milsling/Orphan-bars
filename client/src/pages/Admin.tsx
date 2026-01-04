@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban, Flag, AlertTriangle, Eye } from "lucide-react";
 import { useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -123,6 +123,36 @@ export default function Admin() {
     },
   });
 
+  const { data: reports = [], isLoading: isLoadingReports } = useQuery<any[]>({
+    queryKey: ['admin', 'reports'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/reports', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch reports');
+      return res.json();
+    },
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  const updateReportMutation = useMutation({
+    mutationFn: async ({ reportId, status }: { reportId: string; status: string }) => {
+      const res = await fetch(`/api/admin/reports/${reportId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error('Failed to update report');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
+      toast({ title: "Report updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleModerate = () => {
     if (moderateBarId && moderateReason.trim()) {
       moderateBarMutation.mutate({ barId: moderateBarId, reason: moderateReason.trim() });
@@ -186,7 +216,16 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="reports" className="gap-2">
+              <Flag className="h-4 w-4" />
+              Reports
+              {reports.filter((r: any) => r.status === 'pending').length > 0 && (
+                <Badge variant="destructive" className="ml-1 text-xs">
+                  {reports.filter((r: any) => r.status === 'pending').length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
               Users
@@ -196,6 +235,81 @@ export default function Admin() {
               Bars
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="reports">
+            <Card className="border-border bg-card/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  Content Reports
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingReports ? (
+                  <p className="text-muted-foreground">Loading reports...</p>
+                ) : reports.length === 0 ? (
+                  <p className="text-muted-foreground">No reports yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {reports.map((report: any) => (
+                      <div key={report.id} className="border border-border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={report.status === 'pending' ? 'destructive' : report.status === 'action_taken' ? 'default' : 'secondary'}>
+                                {report.status}
+                              </Badge>
+                              <Badge variant="outline">{report.reason.replace('_', ' ')}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Reported by <span className="font-medium text-foreground">@{report.reporter?.username}</span>
+                              {' · '}
+                              {new Date(report.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {report.status === 'pending' && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateReportMutation.mutate({ reportId: report.id, status: 'dismissed' })}
+                              >
+                                Dismiss
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  if (report.barId) {
+                                    setModerateBarId(report.barId);
+                                    setModerateReason(`Removed due to user report: ${report.reason}`);
+                                  }
+                                  updateReportMutation.mutate({ reportId: report.id, status: 'action_taken' });
+                                }}
+                              >
+                                Take Action
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {report.details && (
+                          <p className="text-sm bg-secondary/30 p-2 rounded">
+                            <span className="font-medium">Details:</span> {report.details}
+                          </p>
+                        )}
+                        {report.bar && (
+                          <div className="border-l-2 border-primary/50 pl-3 py-1">
+                            <p className="text-sm text-muted-foreground mb-1">Reported content:</p>
+                            <p className="text-sm">{stripHtml(report.bar.content)}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="users">
             <Card className="border-border bg-card/50">

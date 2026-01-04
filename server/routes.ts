@@ -11,6 +11,7 @@ import { fromError } from "zod-validation-error";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendVerificationEmail, sendPasswordResetEmail, generateVerificationCode } from "./email";
 import { setupWebSocket, notifyNewMessage } from "./websocket";
+import { containsProhibitedContent } from "./moderation";
 
 const verificationAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const passwordResetAttempts = new Map<string, { count: number; lastAttempt: number }>();
@@ -343,6 +344,14 @@ export async function registerRoutes(
       if (!result.success) {
         return res.status(400).json({ 
           message: fromError(result.error).toString() 
+        });
+      }
+
+      // Content moderation check
+      const moderationResult = containsProhibitedContent(result.data.content);
+      if (moderationResult.blocked) {
+        return res.status(400).json({ 
+          message: moderationResult.reason || "Content violates community guidelines" 
         });
       }
 
@@ -1472,6 +1481,70 @@ export async function registerRoutes(
       }
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Report routes
+  app.post("/api/reports", isAuthenticated, async (req, res) => {
+    try {
+      const { barId, commentId, userId, reason, details } = req.body;
+      
+      const validReasons = ["illegal_content", "harassment", "spam", "hate_speech", "self_harm", "other"];
+      if (!reason || !validReasons.includes(reason)) {
+        return res.status(400).json({ message: "Valid reason is required" });
+      }
+      
+      if (!barId && !commentId && !userId) {
+        return res.status(400).json({ message: "Must specify barId, commentId, or userId to report" });
+      }
+      
+      // Validate that the referenced entity exists
+      if (barId) {
+        const bar = await storage.getBarById(barId);
+        if (!bar) {
+          return res.status(404).json({ message: "Bar not found" });
+        }
+      }
+      
+      const report = await storage.createReport({
+        reporterId: req.user!.id,
+        barId: barId || undefined,
+        commentId: commentId || undefined,
+        userId: userId || undefined,
+        reason,
+        details: details?.trim() || undefined,
+      });
+      
+      res.json(report);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/reports", isAdmin, async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const reports = await storage.getReports(status);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/reports/:id", isAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!["pending", "reviewed", "dismissed", "action_taken"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const report = await storage.updateReportStatus(req.params.id, status, req.user!.id);
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+      res.json(report);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

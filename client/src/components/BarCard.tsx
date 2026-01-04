@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BarWithUser } from "@shared/schema";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag } from "lucide-react";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { shareContent, getBarShareData } from "@/lib/share";
 import ProofScreenshot from "@/components/ProofScreenshot";
@@ -188,6 +188,9 @@ export default function BarCard({ bar }: BarCardProps) {
   const [editContent, setEditContent] = useState(bar.content);
   const [editExplanation, setEditExplanation] = useState(bar.explanation || "");
   const [editCategory, setEditCategory] = useState(bar.category);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
   const [editTags, setEditTags] = useState(bar.tags?.join(", ") || "");
   const [editBarType, setEditBarType] = useState((bar as any).barType || "single_bar");
   const [editFullRapLink, setEditFullRapLink] = useState((bar as any).fullRapLink || "");
@@ -336,6 +339,32 @@ export default function BarCard({ bar }: BarCardProps) {
       queryClient.invalidateQueries({ queryKey: ['bars'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       toast({ title: "Bar deleted" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const reportMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          barId: bar.id,
+          reason: reportReason,
+          details: reportDetails,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).message);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Report submitted", description: "Thank you for helping keep the community safe." });
+      setIsReportOpen(false);
+      setReportReason("");
+      setReportDetails("");
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -524,6 +553,12 @@ export default function BarCard({ bar }: BarCardProps) {
                       Delete
                     </DropdownMenuItem>
                   </>
+                )}
+                {!isOwner && currentUser && (
+                  <DropdownMenuItem onClick={() => setIsReportOpen(true)} className="text-orange-500" data-testid={`button-report-${bar.id}`}>
+                    <Flag className="h-4 w-4 mr-2" />
+                    Report
+                  </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -894,6 +929,55 @@ export default function BarCard({ bar }: BarCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-orange-500" />
+              Report this bar
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger data-testid="select-report-reason">
+                  <SelectValue placeholder="Select a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="illegal_content">Illegal Content (CSAM, exploitation)</SelectItem>
+                  <SelectItem value="harassment">Harassment / Threats</SelectItem>
+                  <SelectItem value="hate_speech">Hate Speech</SelectItem>
+                  <SelectItem value="self_harm">Self-Harm / Violence</SelectItem>
+                  <SelectItem value="spam">Spam / Scam</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Additional details (optional)</Label>
+              <Textarea
+                placeholder="Provide any additional context..."
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                data-testid="input-report-details"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReportOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => reportMutation.mutate()} 
+              disabled={!reportReason || reportMutation.isPending}
+              className="bg-orange-500 hover:bg-orange-600"
+              data-testid="button-submit-report"
+            >
+              {reportMutation.isPending ? "Submitting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ProofScreenshot
         bar={bar}

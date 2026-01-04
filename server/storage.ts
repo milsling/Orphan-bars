@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type UserAchievement, type AchievementId } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type UserAchievement, type AchievementId, type Report } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql, or, ilike, notInArray, ne } from "drizzle-orm";
 import { createHash } from "crypto";
@@ -136,6 +136,11 @@ export interface IStorage {
   getUserAchievements(userId: string): Promise<UserAchievement[]>;
   unlockAchievement(userId: string, achievementId: AchievementId): Promise<UserAchievement | null>;
   checkAndUnlockAchievements(userId: string): Promise<AchievementId[]>;
+  
+  // Report methods
+  createReport(data: { reporterId: string; barId?: string; commentId?: string; userId?: string; reason: string; details?: string }): Promise<Report>;
+  getReports(status?: string): Promise<Array<Report & { reporter: Pick<User, 'id' | 'username'>; bar?: Bar; reportedUser?: Pick<User, 'id' | 'username'> }>>;
+  updateReportStatus(reportId: string, status: string, reviewedBy: string): Promise<Report | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1187,6 +1192,71 @@ export class DatabaseStorage implements IStorage {
     }
     
     return newlyUnlocked;
+  }
+
+  async createReport(data: { reporterId: string; barId?: string; commentId?: string; userId?: string; reason: string; details?: string }): Promise<Report> {
+    const [report] = await db
+      .insert(reports)
+      .values(data)
+      .returning();
+    return report;
+  }
+
+  async getReports(status?: string): Promise<Array<Report & { reporter: Pick<User, 'id' | 'username'>; bar?: Bar; reportedUser?: Pick<User, 'id' | 'username'> }>> {
+    let query = db
+      .select({
+        report: reports,
+        reporter: {
+          id: users.id,
+          username: users.username,
+        },
+      })
+      .from(reports)
+      .innerJoin(users, eq(reports.reporterId, users.id))
+      .orderBy(desc(reports.createdAt));
+
+    const results = status 
+      ? await query.where(eq(reports.status, status))
+      : await query;
+
+    const enrichedReports = await Promise.all(
+      results.map(async (r) => {
+        let bar: Bar | undefined;
+        let reportedUser: Pick<User, 'id' | 'username'> | undefined;
+
+        if (r.report.barId) {
+          const [barResult] = await db.select().from(bars).where(eq(bars.id, r.report.barId));
+          bar = barResult;
+        }
+
+        if (r.report.userId) {
+          const [userResult] = await db.select({ id: users.id, username: users.username }).from(users).where(eq(users.id, r.report.userId));
+          reportedUser = userResult;
+        }
+
+        return {
+          ...r.report,
+          reporter: r.reporter,
+          bar,
+          reportedUser,
+        };
+      })
+    );
+
+    return enrichedReports;
+  }
+
+  async updateReportStatus(reportId: string, status: string, reviewedBy: string): Promise<Report | undefined> {
+    const [report] = await db
+      .update(reports)
+      .set({ 
+        status, 
+        reviewedBy, 
+        reviewedAt: new Date() 
+      })
+      .where(eq(reports.id, reportId))
+      .returning();
+    return report;
   }
 }
 
