@@ -172,11 +172,11 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
 
       <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
         <div className="bg-background/95 backdrop-blur-lg border-t border-border">
-          <div className="flex items-center justify-between px-2 h-16">
+          <div className="flex items-center justify-center gap-4 h-16">
             <button
               onClick={() => setSearchOpen(true)}
               className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors flex-1",
+                "flex flex-col items-center gap-1 w-16 py-2 rounded-lg transition-colors",
                 "text-muted-foreground hover:text-foreground"
               )}
               data-testid="button-search"
@@ -188,7 +188,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
             <button
               onClick={() => setLocation("/")}
               className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors flex-1",
+                "flex flex-col items-center gap-1 w-16 py-2 rounded-lg transition-colors",
                 location === "/" 
                   ? "text-primary" 
                   : "text-muted-foreground hover:text-foreground"
@@ -199,7 +199,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
               <span className="text-[10px] font-medium">Feed</span>
             </button>
 
-            <div className="relative -mt-6">
+            <div className="relative -mt-6 mx-4">
               <motion.button
                 onClick={handleCenterClick}
                 className={cn(
@@ -227,7 +227,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
             <button
               onClick={() => setLocation("/saved")}
               className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors flex-1",
+                "flex flex-col items-center gap-1 w-16 py-2 rounded-lg transition-colors",
                 location === "/saved" 
                   ? "text-primary" 
                   : "text-muted-foreground hover:text-foreground"
