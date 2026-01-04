@@ -40,6 +40,7 @@ Preferred communication style: Simple, everyday language.
   - `push_subscriptions`: Browser push notification subscriptions
   - `friendships`: Friend connections between users (pending/accepted)
   - `direct_messages`: Private messages between friends
+  - `user_achievements`: Unlocked achievements per user with timestamps
 
 ### File Storage
 - **Service**: Google Cloud Storage via Replit Object Storage integration
@@ -124,6 +125,24 @@ Preferred communication style: Simple, everyday language.
 - **Privacy Settings**: Users can choose who can message them (friends_only or everyone)
 - **Read Receipts**: Messages marked as read when conversation opened
 - **Notifications**: New message notifications
+
+### Achievement System
+- **Gamification**: Users earn badges for reaching milestones in activity
+- **Automatic Unlocks**: Achievements checked after posting bars, receiving likes, and gaining followers
+- **Achievement Notifications**: Users receive in-app notifications when unlocking new achievements
+- **Profile Badges**: Earned achievements displayed on user profiles with tooltips
+
+### Achievement Definitions
+- **Origin Founder**: Post 1 bar
+- **Bar Slinger**: Post 10 bars
+- **Wordsmith**: Post 25 bars
+- **Bar Lord**: Post 50 bars
+- **Rising Star**: Gain 10 followers
+- **Cult Leader**: Gain 50 followers
+- **Crowd Pleaser**: Receive 100 total likes
+- **Milsling Heir**: Receive 1000 total likes
+- **Viral**: Get 100 likes on a single bar
+- **Immortal**: Get 500 likes on a single bar
 
 ## Proof-of-Origin System
 
