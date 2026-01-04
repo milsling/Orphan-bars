@@ -832,7 +832,8 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getFriends(userId: string): Promise<Array<User & { friendshipId: string }>> {
+  async getFriends(userId: string): Promise<Array<User & { friendshipId: string; isRecentlyActive: boolean }>> {
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
     const result = await db
       .select({ friendship: friendships, user: users })
       .from(friendships)
@@ -844,7 +845,11 @@ export class DatabaseStorage implements IStorage {
         eq(friendships.status, "accepted"),
         or(eq(friendships.requesterId, userId), eq(friendships.receiverId, userId))
       ));
-    return result.filter(r => r.user).map(r => ({ ...r.user!, friendshipId: r.friendship.id }));
+    return result.filter(r => r.user).map(r => ({ 
+      ...r.user!, 
+      friendshipId: r.friendship.id,
+      isRecentlyActive: r.user!.lastSeenAt ? new Date(r.user!.lastSeenAt) > twoMinutesAgo : false
+    }));
   }
 
   async getPendingRequests(userId: string): Promise<Array<Friendship & { requester: Pick<User, 'id' | 'username' | 'avatarUrl'> }>> {

@@ -88,12 +88,18 @@ export default function Friends() {
     },
   });
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
+  const getStatusColor = (friend: any) => {
+    if (!friend.isRecentlyActive) return 'bg-gray-400';
+    switch (friend.onlineStatus) {
       case 'online': return 'bg-green-500';
       case 'busy': return 'bg-amber-500';
       default: return 'bg-gray-400';
     }
+  };
+  
+  const getStatusText = (friend: any) => {
+    if (!friend.isRecentlyActive) return 'offline';
+    return friend.onlineStatus || 'offline';
   };
 
   return (
@@ -143,14 +149,14 @@ export default function Friends() {
                           <AvatarImage src={friend.avatarUrl || undefined} />
                           <AvatarFallback>{friend.username[0].toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ${getStatusColor(friend.onlineStatus)} border-2 border-background`} />
+                        <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ${getStatusColor(friend)} border-2 border-background`} />
                       </div>
                     </Link>
                     <div className="flex-1">
                       <Link href={`/u/${friend.username}`}>
                         <p className="font-bold hover:text-primary cursor-pointer transition-colors">@{friend.username}</p>
                       </Link>
-                      <p className="text-xs text-muted-foreground capitalize">{friend.onlineStatus || 'offline'}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{getStatusText(friend)}</p>
                     </div>
                     <div className="flex gap-2">
                       <Link href={`/messages/${friend.id}`}>

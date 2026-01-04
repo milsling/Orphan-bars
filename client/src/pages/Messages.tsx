@@ -80,7 +80,7 @@ export default function Messages() {
     ? safeConversations.find((c: any) => c.user?.id === selectedUserId)?.user
     : null;
 
-  const { data: fetchedUser } = useQuery({
+  const { data: fetchedUser, isLoading: loadingUser } = useQuery({
     queryKey: ['user', selectedUserId],
     queryFn: async () => {
       const res = await fetch(`/api/users/by-id/${selectedUserId}`, { credentials: 'include' });
@@ -91,7 +91,8 @@ export default function Messages() {
     staleTime: 60000,
   });
 
-  const selectedUser = conversationUser || fetchedUser;
+  const friendUser = selectedUserId ? safeFriends.find((f: any) => f.id === selectedUserId) : null;
+  const selectedUser = conversationUser || fetchedUser || friendUser;
 
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -263,11 +264,11 @@ export default function Messages() {
                             <AvatarImage src={friend.avatarUrl || undefined} />
                             <AvatarFallback>{friend.username[0].toUpperCase()}</AvatarFallback>
                           </Avatar>
-                          <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${getStatusColor(friend.onlineStatus, friend.lastSeenAt)} border-2 border-background`} />
+                          <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${friend.isRecentlyActive ? getStatusColor(friend.onlineStatus, friend.lastSeenAt) : 'bg-gray-400'} border-2 border-background`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">@{friend.username}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{friend.onlineStatus || 'offline'}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{friend.isRecentlyActive ? (friend.onlineStatus || 'offline') : 'offline'}</p>
                         </div>
                         {conversationUserIds.has(friend.id) && (
                           <Badge variant="secondary" className="text-[10px] px-1.5">Chat</Badge>
@@ -281,7 +282,14 @@ export default function Messages() {
           </Card>
 
           <Card className="md:col-span-2 flex flex-col overflow-hidden">
-            {selectedUserId && selectedUser ? (
+            {selectedUserId && (loadingUser || loadingConversations) ? (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50 animate-pulse" />
+                  <p>Loading conversation...</p>
+                </div>
+              </div>
+            ) : selectedUserId && selectedUser ? (
               <>
                 <div className="p-3 border-b flex items-center gap-3">
                   <Button
