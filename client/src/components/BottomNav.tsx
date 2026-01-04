@@ -46,7 +46,6 @@ export function BottomNav({ onNewMessage, activeFilter = "featured", onFilterCha
 
     const items = [
       { icon: Home, label: "Feed", path: "/" },
-      { icon: Plus, label: "Drop Bar", path: "/post" },
       { icon: MessageCircle, label: "Messages", path: "/messages", badge: unreadCount },
       { icon: Users, label: "Friends", path: "/friends", badge: pendingFriendRequests },
       { icon: Bookmark, label: "Saved", path: "/saved" },
@@ -90,7 +89,23 @@ export function BottomNav({ onNewMessage, activeFilter = "featured", onFilterCha
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed bottom-20 left-4 right-4 z-50 bg-card border border-border rounded-2xl p-6 shadow-2xl"
             >
-              <div className="grid grid-cols-3 gap-4">
+              <button
+                onClick={() => handleNavClick("/post")}
+                className="w-full mb-4 p-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all active:scale-[0.98]"
+                data-testid="nav-item-drop-bar-main"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                    <Plus className="w-7 h-7 text-primary-foreground" />
+                  </div>
+                  <div className="text-left">
+                    <span className="text-lg font-bold text-primary-foreground block">Drop Bar</span>
+                    <span className="text-xs text-primary-foreground/70">Share your bars with the world</span>
+                  </div>
+                </div>
+              </button>
+              
+              <div className="grid grid-cols-3 gap-3">
                 {navItems.map((item) => {
                   const isActive = item.path && location === item.path;
                   return (
@@ -98,31 +113,31 @@ export function BottomNav({ onNewMessage, activeFilter = "featured", onFilterCha
                       key={item.path}
                       onClick={() => handleNavClick(item.path)}
                       className={cn(
-                        "flex flex-col items-center gap-2 p-4 rounded-xl transition-all",
+                        "flex flex-col items-center gap-2 p-3 rounded-xl transition-all",
                         "hover:bg-muted active:scale-95",
                         isActive && "bg-primary/10"
                       )}
                       data-testid={`nav-item-${item.label.toLowerCase().replace(' ', '-')}`}
                     >
                       <div className={cn(
-                        "relative w-14 h-14 rounded-full flex items-center justify-center",
+                        "relative w-12 h-12 rounded-full flex items-center justify-center",
                         "border-2 transition-colors",
                         isActive 
                           ? "bg-primary border-primary" 
                           : "bg-muted/50 border-border hover:border-primary/50"
                       )}>
                         <item.icon className={cn(
-                          "w-6 h-6",
+                          "w-5 h-5",
                           isActive ? "text-primary-foreground" : "text-foreground"
                         )} />
                         {item.badge && item.badge > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-bold flex items-center justify-center">
+                          <span className="absolute -top-1 -right-1 min-w-[18px] h-4.5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
                             {item.badge > 99 ? '99+' : item.badge}
                           </span>
                         )}
                       </div>
                       <span className={cn(
-                        "text-xs font-medium",
+                        "text-[11px] font-medium",
                         isActive ? "text-primary" : "text-muted-foreground"
                       )}>
                         {item.label}
