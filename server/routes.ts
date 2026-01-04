@@ -6,7 +6,7 @@ import { bars } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import passport from "passport";
-import { insertUserSchema, insertBarSchema, updateBarSchema } from "@shared/schema";
+import { insertUserSchema, insertBarSchema, updateBarSchema, ACHIEVEMENTS } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { sendVerificationEmail, sendPasswordResetEmail, generateVerificationCode } from "./email";
@@ -383,10 +383,22 @@ export async function registerRoutes(
         }
       }
       
+      // Check for newly unlocked achievements after posting bar
+      const newAchievements = await storage.checkAndUnlockAchievements(req.user!.id);
+      for (const achievementId of newAchievements) {
+        const achievement = ACHIEVEMENTS[achievementId];
+        await storage.createNotification({
+          userId: req.user!.id,
+          type: "achievement",
+          message: `${achievement.emoji} Achievement unlocked: ${achievement.name}!`,
+        });
+      }
+      
       res.json({ 
         ...bar, 
         proofHash,
-        duplicateWarnings: duplicateWarnings.length > 0 ? duplicateWarnings : undefined 
+        duplicateWarnings: duplicateWarnings.length > 0 ? duplicateWarnings : undefined,
+        newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -620,6 +632,17 @@ export async function registerRoutes(
             barId: bar.id,
             message: `@${req.user!.username} liked your bar`
           });
+          
+          // Check achievements for the bar owner (they received a like)
+          const newAchievements = await storage.checkAndUnlockAchievements(bar.userId);
+          for (const achievementId of newAchievements) {
+            const achievement = ACHIEVEMENTS[achievementId];
+            await storage.createNotification({
+              userId: bar.userId,
+              type: "achievement",
+              message: `${achievement.emoji} Achievement unlocked: ${achievement.name}!`,
+            });
+          }
         }
       }
       
@@ -813,6 +836,20 @@ export async function registerRoutes(
   app.post("/api/users/:userId/follow", isAuthenticated, async (req, res) => {
     try {
       const followed = await storage.followUser(req.user!.id, req.params.userId);
+      
+      // Check achievements for the user being followed (they gained a follower)
+      if (followed) {
+        const newAchievements = await storage.checkAndUnlockAchievements(req.params.userId);
+        for (const achievementId of newAchievements) {
+          const achievement = ACHIEVEMENTS[achievementId];
+          await storage.createNotification({
+            userId: req.params.userId,
+            type: "achievement",
+            message: `${achievement.emoji} Achievement unlocked: ${achievement.name}!`,
+          });
+        }
+      }
+      
       res.json({ followed });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -847,6 +884,28 @@ export async function registerRoutes(
         storage.getFollowingCount(req.params.userId)
       ]);
       res.json({ barsCount, followersCount, followingCount });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Achievement routes
+  app.get("/api/users/:userId/achievements", async (req, res) => {
+    try {
+      const achievements = await storage.getUserAchievements(req.params.userId);
+      const achievementsWithDetails = achievements.map(a => ({
+        ...a,
+        ...(ACHIEVEMENTS[a.achievementId as keyof typeof ACHIEVEMENTS] || {}),
+      }));
+      res.json(achievementsWithDetails);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/achievements", async (_req, res) => {
+    try {
+      res.json(ACHIEVEMENTS);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
