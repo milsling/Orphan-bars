@@ -385,17 +385,20 @@ export async function registerRoutes(
       // Create the bar first
       const bar = await storage.createBar(barData);
       
-      // Generate proof-of-origin data
-      const sequenceNum = await storage.getNextBarSequence();
-      const proofBarId = `orphanbars-#${sequenceNum.toString().padStart(5, '0')}`;
+      let proofBarId: string | null = null;
+      let proofHash: string | null = null;
       
-      // Generate proof hash
-      const proofHash = generateProofHash(bar.content, bar.createdAt, bar.userId, proofBarId);
+      // Only generate proof-of-origin data for original content
+      if (bar.isOriginal) {
+        const sequenceNum = await storage.getNextBarSequence();
+        proofBarId = `orphanbars-#${sequenceNum.toString().padStart(5, '0')}`;
+        proofHash = generateProofHash(bar.content, bar.createdAt, bar.userId, proofBarId);
+      }
       
-      // Update bar with proof data
+      // Update bar with proof data (only if original) and other metadata
       await db.update(bars).set({ 
-        proofBarId, 
-        proofHash,
+        ...(proofBarId && { proofBarId }),
+        ...(proofHash && { proofHash }),
         permissionStatus: req.body.permissionStatus || "share_only",
         barType: req.body.barType || "single_bar",
         fullRapLink: req.body.fullRapLink || null
@@ -429,6 +432,7 @@ export async function registerRoutes(
       
       res.json({ 
         ...bar, 
+        proofBarId,
         proofHash,
         duplicateWarnings: duplicateWarnings.length > 0 ? duplicateWarnings : undefined,
         newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
