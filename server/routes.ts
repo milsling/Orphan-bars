@@ -1667,6 +1667,39 @@ export async function registerRoutes(
     }
   });
 
+  // Maintenance status routes (public endpoint)
+  app.get("/api/maintenance", async (req, res) => {
+    try {
+      const status = await storage.getMaintenanceStatus();
+      res.json(status || { isActive: false });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin maintenance controls
+  app.post("/api/admin/maintenance", isAdmin, async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      const status = await storage.activateMaintenance(message, req.user!.id);
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/maintenance", isAdmin, async (req, res) => {
+    try {
+      await storage.clearMaintenance();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Online status routes
   app.get("/api/online/count", async (req, res) => {
     try {

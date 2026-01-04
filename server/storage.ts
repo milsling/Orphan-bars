@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql, or, ilike, notInArray, ne } from "drizzle-orm";
 import { createHash } from "crypto";
@@ -151,6 +151,11 @@ export interface IStorage {
   // Bar moderation methods
   getPendingModerationBars(): Promise<Array<Bar & { user: User; matchedPhrase?: FlaggedPhrase }>>;
   updateBarModerationStatus(barId: string, status: string): Promise<Bar | undefined>;
+  
+  // Maintenance status methods
+  getMaintenanceStatus(): Promise<MaintenanceStatus | null>;
+  activateMaintenance(message: string, userId: string): Promise<MaintenanceStatus>;
+  clearMaintenance(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1340,6 +1345,37 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bars.id, barId))
       .returning();
     return bar;
+  }
+
+  async getMaintenanceStatus(): Promise<MaintenanceStatus | null> {
+    const [status] = await db.select().from(maintenanceStatus).where(eq(maintenanceStatus.id, 'singleton'));
+    if (!status || !status.isActive) return null;
+    return status;
+  }
+
+  async activateMaintenance(message: string, userId: string): Promise<MaintenanceStatus> {
+    const existing = await db.select().from(maintenanceStatus).where(eq(maintenanceStatus.id, 'singleton'));
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(maintenanceStatus)
+        .set({ isActive: true, message, activatedAt: new Date(), activatedBy: userId })
+        .where(eq(maintenanceStatus.id, 'singleton'))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(maintenanceStatus)
+        .values({ id: 'singleton', isActive: true, message, activatedAt: new Date(), activatedBy: userId })
+        .returning();
+      return created;
+    }
+  }
+
+  async clearMaintenance(): Promise<void> {
+    await db
+      .update(maintenanceStatus)
+      .set({ isActive: false, message: null, activatedAt: null, activatedBy: null })
+      .where(eq(maintenanceStatus.id, 'singleton'));
   }
 }
 

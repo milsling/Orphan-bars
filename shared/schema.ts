@@ -385,3 +385,13 @@ export type BarWithUser = Bar & {
 
 export const categoryOptions = ["Funny", "Serious", "Wordplay", "Storytelling", "Battle", "Freestyle"] as const;
 export const membershipTiers = ["free", "donor", "donor_plus"] as const;
+
+export const maintenanceStatus = pgTable("maintenance_status", {
+  id: varchar("id").primaryKey().default("singleton"),
+  isActive: boolean("is_active").notNull().default(false),
+  message: text("message"),
+  activatedAt: timestamp("activated_at"),
+  activatedBy: varchar("activated_by").references(() => users.id),
+});
+
+export type MaintenanceStatus = typeof maintenanceStatus.$inferSelect;
