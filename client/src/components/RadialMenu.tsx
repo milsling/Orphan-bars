@@ -96,26 +96,26 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
   const radius = 120;
   const innerRadius = 40;
 
+  const getSliceAngles = (index: number, total: number) => {
+    const sliceAngle = 180 / total;
+    const startAngle = 180 + (index * sliceAngle);
+    const endAngle = startAngle + sliceAngle;
+    const midAngle = (startAngle + endAngle) / 2;
+    return { startAngle, endAngle, midAngle };
+  };
+
   const getIconPosition = (index: number, total: number) => {
-    const spreadAngle = Math.min(180, total * 35);
-    const startOffset = (180 - spreadAngle) / 2;
-    const itemAngle = total > 1 ? spreadAngle / (total - 1) : 0;
-    const midAngle = 180 + startOffset + (index * itemAngle);
+    const { midAngle } = getSliceAngles(index, total);
     const midRad = (midAngle * Math.PI) / 180;
     const iconRadius = (radius + innerRadius) / 2;
     return {
       x: Math.cos(midRad) * iconRadius,
       y: Math.sin(midRad) * iconRadius,
-      angle: midAngle,
     };
   };
 
   const getSlicePath = (index: number, total: number) => {
-    const spreadAngle = Math.min(180, total * 35);
-    const startOffset = (180 - spreadAngle) / 2;
-    const itemAngle = spreadAngle / total;
-    const startAngle = 180 + startOffset + (index * itemAngle);
-    const endAngle = startAngle + itemAngle;
+    const { startAngle, endAngle } = getSliceAngles(index, total);
     
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = (endAngle * Math.PI) / 180;
