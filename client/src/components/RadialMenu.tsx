@@ -231,13 +231,17 @@ export function RadialMenu({ onNewMessage }: RadialMenuProps) {
 
       <div 
         ref={containerRef}
-        className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none select-none"
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 select-none",
+          isOpen ? "pointer-events-auto" : "pointer-events-none"
+        )}
         style={{
           WebkitTouchCallout: 'none',
           WebkitUserSelect: 'none',
           MozUserSelect: 'none',
           msUserSelect: 'none',
           userSelect: 'none',
+          height: isOpen ? radius + 100 : 'auto',
         } as React.CSSProperties}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
