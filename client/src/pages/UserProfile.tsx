@@ -67,6 +67,23 @@ export default function UserProfile() {
     refetchOnMount: false,
   });
 
+  const { data: achievements = [] } = useQuery({
+    queryKey: ["userAchievements", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      try {
+        return await api.getUserAchievements(user.id);
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!user?.id,
+    staleTime: 60000,
+    gcTime: 300000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
   const { data: isFollowing = false } = useQuery({
     queryKey: ["isFollowing", user?.id],
     queryFn: async () => {
@@ -257,6 +274,24 @@ export default function UserProfile() {
                   <span className="text-muted-foreground ml-1">Following</span>
                 </div>
               </div>
+              {achievements.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                    {achievements.map((achievement) => (
+                      <Badge 
+                        key={achievement.achievementId} 
+                        variant="secondary" 
+                        className="text-sm cursor-help"
+                        title={achievement.description}
+                        data-testid={`badge-achievement-${achievement.achievementId}`}
+                      >
+                        <span className="mr-1">{achievement.emoji}</span>
+                        {achievement.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           {/* Action buttons in separate section to prevent overlap */}

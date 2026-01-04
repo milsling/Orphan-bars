@@ -260,6 +260,11 @@ export const api = {
     return handleResponse<{ barsCount: number; followersCount: number; followingCount: number }>(response);
   },
 
+  getUserAchievements: async (userId: string): Promise<Array<{ achievementId: string; unlockedAt: Date; emoji: string; name: string; description: string }>> => {
+    const response = await apiFetch(`/api/users/${userId}/achievements`);
+    return handleResponse(response);
+  },
+
   // Username
   changeUsername: async (username: string): Promise<User> => {
     const response = await apiFetch('/api/users/me/username', {
