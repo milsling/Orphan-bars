@@ -163,9 +163,10 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   <button
                     onClick={() => setMenuSection("orphanbars")}
                     className={cn(
-                      "flex-1 flex flex-col items-center justify-center px-3 py-3 transition-all active:scale-95",
+                      "h-1/2 flex flex-col items-center justify-center px-3 py-3 transition-all active:scale-95",
                       menuSection === "orphanbars" ? "bg-primary" : "bg-primary/70"
                     )}
+                    style={{ flexBasis: '50%' }}
                     data-testid="nav-section-orphanbars"
                   >
                     <img 
@@ -188,9 +189,10 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   <button
                     onClick={() => setMenuSection("orphanage")}
                     className={cn(
-                      "flex-1 flex flex-col items-center justify-center px-3 py-3 transition-all active:scale-95",
+                      "h-1/2 flex flex-col items-center justify-center px-3 py-3 transition-all active:scale-95",
                       menuSection === "orphanage" ? "bg-primary" : "bg-primary/70"
                     )}
+                    style={{ flexBasis: '50%' }}
                     data-testid="nav-section-orphanage"
                   >
                     <img 
