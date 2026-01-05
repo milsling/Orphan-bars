@@ -171,7 +171,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                       alt="Orphan Bars" 
                       className={cn(
                         "h-12 w-auto transition-all",
-                        menuSection === "orphanbars" ? "invert brightness-200" : "opacity-70"
+                        menuSection === "orphanbars" ? "brightness-0 invert" : "opacity-70"
                       )}
                     />
                     <span 
@@ -195,8 +195,8 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                       src={orphanageMenuLogo} 
                       alt="The Orphanage" 
                       className={cn(
-                        "h-16 w-auto object-contain transition-all",
-                        menuSection === "orphanage" ? "invert brightness-200" : "dark:invert dark:brightness-200 opacity-70"
+                        "h-20 w-auto object-contain transition-all",
+                        menuSection === "orphanage" ? "brightness-0 invert" : "dark:invert dark:brightness-200 opacity-70"
                       )}
                     />
                     <span 
