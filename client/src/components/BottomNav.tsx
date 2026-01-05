@@ -85,28 +85,30 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed bottom-20 left-4 right-4 z-50 bg-card border border-border rounded-2xl p-6 shadow-2xl"
+              className="fixed bottom-20 left-4 right-4 z-50 bg-card border border-border rounded-2xl overflow-hidden shadow-2xl"
             >
               {currentUser && (
-                <button
-                  onClick={() => handleNavClick("/post")}
-                  className="w-full mb-4 p-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all active:scale-[0.98]"
-                  data-testid="nav-item-drop-bar-main"
-                >
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                      <Plus className="w-7 h-7 text-primary-foreground" />
+                <div className="p-4 pb-0">
+                  <button
+                    onClick={() => handleNavClick("/post")}
+                    className="w-full p-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all active:scale-[0.98]"
+                    data-testid="nav-item-drop-bar-main"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                        <Plus className="w-7 h-7 text-primary-foreground" />
+                      </div>
+                      <div className="text-left">
+                        <span className="text-lg font-bold text-primary-foreground block">Drop Bar</span>
+                        <span className="text-xs text-primary-foreground/70">Share your bars with the world</span>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <span className="text-lg font-bold text-primary-foreground block">Drop Bar</span>
-                      <span className="text-xs text-primary-foreground/70">Share your bars with the world</span>
-                    </div>
-                  </div>
-                </button>
+                  </button>
+                </div>
               )}
               
               <div className="flex">
-                <div className="grid grid-cols-2 gap-2 flex-1">
+                <div className="grid grid-cols-2 gap-2 flex-1 p-4">
                   {navItems.map((item) => {
                     const isActive = item.path && location === item.path;
                     return (
@@ -143,35 +145,30 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   })}
                 </div>
                 
-                <div className="w-px bg-border mx-2 self-stretch" />
-                
-                <div className="flex flex-col gap-3 w-36">
+                <div className="flex flex-col justify-center gap-4 w-36 bg-primary py-4 px-3">
                   <button
                     onClick={() => handleNavClick("/")}
-                    className="flex flex-col items-center gap-2 p-2 transition-all active:scale-95"
+                    className="flex flex-col items-center gap-2 transition-all active:scale-95"
                   >
                     <img 
                       src={orphanBarsMenuLogo} 
                       alt="Orphan Bars" 
                       className="h-12 w-auto"
                     />
-                    <span className="text-xs text-primary" style={{ fontFamily: 'var(--font-logo)' }}>ORPHAN BARS</span>
+                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHAN BARS</span>
                   </button>
                   
                   <button
                     onClick={() => handleNavClick("/orphanage")}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-2 transition-all active:scale-95",
-                      location === "/orphanage" && "opacity-100"
-                    )}
+                    className="flex flex-col items-center gap-2 transition-all active:scale-95"
                     data-testid="nav-item-orphanage"
                   >
                     <img 
                       src={orphanageMenuLogo} 
                       alt="The Orphanage" 
-                      className="h-10 w-auto object-contain dark:invert dark:brightness-200"
+                      className="h-10 w-auto object-contain invert brightness-200"
                     />
-                    <span className="text-xs text-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHANAGE</span>
+                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHANAGE</span>
                   </button>
                 </div>
               </div>
