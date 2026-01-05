@@ -2,7 +2,7 @@ import Navigation from "@/components/Navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import BarCard from "@/components/BarCard";
-import { Settings, Share2, MapPin, Edit } from "lucide-react";
+import { Settings, Share2, MapPin, Edit, Trophy } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBars } from "@/context/BarContext";
 import { Link, useLocation } from "wouter";
@@ -63,7 +63,17 @@ export default function Profile() {
       <main className="max-w-3xl mx-auto">
         {/* Profile Header */}
         <div className="relative">
-          <div className="h-32 md:h-48 bg-gradient-to-r from-zinc-900 to-zinc-800 w-full" />
+          {currentUser.bannerUrl ? (
+            <div className="h-32 md:h-48 w-full overflow-hidden">
+              <img 
+                src={currentUser.bannerUrl} 
+                alt="Profile banner"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="h-32 md:h-48 bg-gradient-to-r from-zinc-900 to-zinc-800 w-full" />
+          )}
           
           <div className="px-4 md:px-8 -mt-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
             <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
@@ -86,11 +96,17 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="flex gap-2 w-full md:w-auto mb-2">
+            <div className="flex gap-2 w-full md:w-auto mb-2 flex-wrap">
               <Link href="/profile/edit">
                 <Button variant="outline" className="gap-2" data-testid="button-edit-profile">
                   <Edit className="h-4 w-4" />
                   Edit
+                </Button>
+              </Link>
+              <Link href="/achievements">
+                <Button variant="outline" className="gap-2" data-testid="button-achievements">
+                  <Trophy className="h-4 w-4" />
+                  Achievements
                 </Button>
               </Link>
               <Button variant="outline" className="gap-2" onClick={handleLogout} data-testid="button-logout">

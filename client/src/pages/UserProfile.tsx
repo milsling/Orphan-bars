@@ -231,9 +231,19 @@ export default function UserProfile() {
           Back to Feed
         </Button>
 
-        <div className="bg-card rounded-lg p-4 md:p-6 mb-6 border">
+        <div className="bg-card rounded-lg overflow-hidden mb-6 border">
+          {user.bannerUrl && (
+            <div className="w-full h-32 md:h-40">
+              <img 
+                src={user.bannerUrl} 
+                alt={`${user.username}'s banner`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          <div className="p-4 md:p-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-            <Avatar className="h-20 w-20 shrink-0">
+            <Avatar className={`h-20 w-20 shrink-0 ${user.bannerUrl ? '-mt-12 border-4 border-card' : ''}`}>
               <AvatarImage src={user.avatarUrl || undefined} />
               <AvatarFallback className="text-2xl">
                 {user.username.charAt(0).toUpperCase()}
@@ -355,6 +365,7 @@ export default function UserProfile() {
               <Share2 className="h-4 w-4 mr-1" />
               Share
             </Button>
+          </div>
           </div>
         </div>
 

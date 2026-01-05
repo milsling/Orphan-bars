@@ -179,6 +179,7 @@ export const api = {
     bio?: string;
     location?: string;
     avatarUrl?: string;
+    bannerUrl?: string;
     messagePrivacy?: string;
   }): Promise<User> => {
     const response = await apiFetch('/api/users/me', {

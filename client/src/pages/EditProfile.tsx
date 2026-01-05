@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, Camera, Loader2, Lock, MessageCircle } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Lock, MessageCircle, ImageIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -20,11 +20,14 @@ export default function EditProfile() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [bio, setBio] = useState(currentUser?.bio || "");
   const [location, setLocationField] = useState(currentUser?.location || "");
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl || "");
+  const [bannerUrl, setBannerUrl] = useState(currentUser?.bannerUrl || "");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [newUsername, setNewUsername] = useState(currentUser?.username || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -49,10 +52,11 @@ export default function EditProfile() {
   }
 
   const updateProfileMutation = useMutation({
-    mutationFn: (data: { bio?: string; location?: string; avatarUrl?: string }) =>
+    mutationFn: (data: { bio?: string; location?: string; avatarUrl?: string; bannerUrl?: string }) =>
       api.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      queryClient.invalidateQueries({ queryKey: ['user', currentUser.username] });
       toast({
         title: "Profile updated!",
         description: "Your changes have been saved.",
@@ -148,6 +152,62 @@ export default function EditProfile() {
     fileInputRef.current?.click();
   };
 
+  const handleBannerClick = () => {
+    bannerInputRef.current?.click();
+  };
+
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image under 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingBanner(true);
+    try {
+      const { uploadURL, objectPath } = await api.requestUploadUrl({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+
+      await fetch(uploadURL, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+
+      setBannerUrl(objectPath);
+      toast({
+        title: "Banner uploaded!",
+        description: "Click Save to update your profile.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Could not upload banner",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -205,6 +265,7 @@ export default function EditProfile() {
       bio: bio || undefined,
       location: location || undefined,
       avatarUrl: avatarUrl || undefined,
+      bannerUrl: bannerUrl || undefined,
     });
   };
 
@@ -227,6 +288,45 @@ export default function EditProfile() {
             <CardTitle>Profile Settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Banner Upload */}
+            <div className="space-y-2">
+              <Label>Profile Banner</Label>
+              <div 
+                className="relative w-full h-32 rounded-lg overflow-hidden bg-secondary/30 border border-dashed border-border cursor-pointer hover:bg-secondary/50 transition-colors"
+                onClick={handleBannerClick}
+                data-testid="button-upload-banner"
+              >
+                {bannerUrl ? (
+                  <img 
+                    src={bannerUrl} 
+                    alt="Profile banner" 
+                    className="w-full h-full object-cover"
+                    data-testid="img-banner-preview"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <ImageIcon className="h-8 w-8 mb-2" />
+                    <span className="text-sm">Click to upload banner</span>
+                  </div>
+                )}
+                {isUploadingBanner && (
+                  <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleBannerChange}
+                data-testid="input-banner-file"
+              />
+              <p className="text-xs text-muted-foreground">Recommended: 1200x400 pixels, max 10MB</p>
+            </div>
+
+            {/* Avatar Upload */}
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
                 <Avatar className="h-24 w-24 border-4 border-background shadow-xl">

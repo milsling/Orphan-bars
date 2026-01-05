@@ -1255,12 +1255,13 @@ export async function registerRoutes(
 
   app.patch("/api/users/me", isAuthenticated, async (req, res) => {
     try {
-      const { bio, location, avatarUrl, messagePrivacy } = req.body;
+      const { bio, location, avatarUrl, bannerUrl, messagePrivacy } = req.body;
       const updates: Record<string, any> = {};
       
       if (bio !== undefined) updates.bio = bio;
       if (location !== undefined) updates.location = location;
       if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+      if (bannerUrl !== undefined) updates.bannerUrl = bannerUrl;
       if (messagePrivacy !== undefined) {
         if (!["friends_only", "everyone"].includes(messagePrivacy)) {
           return res.status(400).json({ message: "Invalid privacy setting" });
