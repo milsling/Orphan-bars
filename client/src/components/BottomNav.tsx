@@ -12,7 +12,10 @@ import {
   LogIn,
   Grid3X3,
   X,
-  Search
+  Search,
+  DoorOpen,
+  Heart,
+  BarChart3
 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { cn } from "@/lib/utils";
@@ -28,6 +31,7 @@ interface BottomNavProps {
 export function BottomNav({ onNewMessage }: BottomNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [menuSection, setMenuSection] = useState<"orphanbars" | "orphanage">("orphanbars");
   const [location, setLocation] = useLocation();
   const { currentUser } = useBars();
   const unreadCount = useUnreadMessagesCount();
@@ -39,6 +43,14 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
       return [
         { icon: Home, label: "Feed", path: "/" },
         { icon: LogIn, label: "Login", path: "/auth" },
+      ];
+    }
+
+    if (menuSection === "orphanage") {
+      return [
+        { icon: DoorOpen, label: "Enter", path: "/orphanage" },
+        { icon: BarChart3, label: "Stats", path: "/orphanage" },
+        { icon: Heart, label: "Favorites", path: "/saved" },
       ];
     }
 
@@ -145,30 +157,55 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   })}
                 </div>
                 
-                <div className="flex flex-col justify-center gap-3 w-36 bg-primary py-4 px-3">
+                <div className="flex flex-col w-36">
                   <button
-                    onClick={() => handleNavClick("/")}
-                    className="flex flex-col items-center gap-1 transition-all active:scale-95"
+                    onClick={() => setMenuSection("orphanbars")}
+                    className={cn(
+                      "flex-1 flex flex-col items-center justify-center gap-1 py-4 px-3 transition-all active:scale-95",
+                      menuSection === "orphanbars" ? "bg-primary" : "bg-muted/30"
+                    )}
+                    data-testid="nav-section-orphanbars"
                   >
                     <img 
                       src={orphanBarsMenuLogo} 
                       alt="Orphan Bars" 
-                      className="h-12 w-auto"
+                      className={cn(
+                        "h-12 w-auto transition-all",
+                        menuSection === "orphanbars" ? "" : "opacity-70"
+                      )}
                     />
-                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHAN BARS</span>
+                    <span 
+                      className={cn(
+                        "text-xs transition-colors",
+                        menuSection === "orphanbars" ? "text-primary-foreground" : "text-muted-foreground"
+                      )} 
+                      style={{ fontFamily: 'var(--font-logo)' }}
+                    >ORPHAN BARS</span>
                   </button>
                   
                   <button
-                    onClick={() => handleNavClick("/orphanage")}
-                    className="flex flex-col items-center gap-1 transition-all active:scale-95"
-                    data-testid="nav-item-orphanage"
+                    onClick={() => setMenuSection("orphanage")}
+                    className={cn(
+                      "flex-1 flex flex-col items-center justify-center gap-1 py-4 px-3 transition-all active:scale-95",
+                      menuSection === "orphanage" ? "bg-primary" : "bg-muted/30"
+                    )}
+                    data-testid="nav-section-orphanage"
                   >
                     <img 
                       src={orphanageMenuLogo} 
                       alt="The Orphanage" 
-                      className="h-14 w-auto object-contain invert brightness-200"
+                      className={cn(
+                        "h-14 w-auto object-contain transition-all",
+                        menuSection === "orphanage" ? "invert brightness-200" : "dark:invert dark:brightness-200 opacity-70"
+                      )}
                     />
-                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHANAGE</span>
+                    <span 
+                      className={cn(
+                        "text-xs transition-colors",
+                        menuSection === "orphanage" ? "text-primary-foreground" : "text-muted-foreground"
+                      )} 
+                      style={{ fontFamily: 'var(--font-logo)' }}
+                    >ORPHANAGE</span>
                   </button>
                 </div>
               </div>
