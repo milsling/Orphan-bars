@@ -146,6 +146,39 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                     </button>
                   );
                 })}
+                
+                <button
+                  onClick={() => handleNavClick("/orphanage")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-3 rounded-xl transition-all",
+                    "hover:bg-muted active:scale-95",
+                    location === "/orphanage" && "bg-primary/10"
+                  )}
+                  data-testid="nav-item-orphanage"
+                >
+                  <div className={cn(
+                    "relative w-12 h-12 rounded-xl flex items-center justify-center",
+                    "border-2 transition-colors",
+                    location === "/orphanage"
+                      ? "bg-primary border-primary" 
+                      : "bg-muted/50 border-border hover:border-primary/50"
+                  )}>
+                    <img 
+                      src={orphanageIcon} 
+                      alt="The Orphanage" 
+                      className={cn(
+                        "w-6 h-6 object-contain",
+                        location === "/orphanage" ? "invert brightness-200" : "dark:invert dark:brightness-200"
+                      )}
+                    />
+                  </div>
+                  <span className={cn(
+                    "text-[11px] font-medium",
+                    location === "/orphanage" ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    Orphanage
+                  </span>
+                </button>
               </div>
             </motion.div>
           </>
@@ -256,25 +289,6 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
               <User className="w-5 h-5" />
               <span className="text-[10px] font-medium">Profile</span>
             </button>
-
-            <motion.button
-              onClick={() => setLocation("/orphanage")}
-              className={cn(
-                "w-11 h-11 rounded-xl flex-shrink-0 ml-1",
-                "bg-gradient-to-br from-primary to-primary/80",
-                "flex items-center justify-center",
-                "shadow-lg shadow-primary/30",
-                location === "/orphanage" && "ring-2 ring-primary-foreground"
-              )}
-              whileTap={{ scale: 0.9 }}
-              data-testid="nav-orphanage"
-            >
-              <img 
-                src={orphanageIcon} 
-                alt="The Orphanage" 
-                className="w-6 h-6 object-contain invert brightness-200"
-              />
-            </motion.button>
           </div>
         </div>
       </div>
