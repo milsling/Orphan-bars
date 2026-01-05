@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Home, Users, ExternalLink, ChevronDown, ChevronUp, Send } from "lucide-react";
+import { Home, Users, ExternalLink, ChevronDown, ChevronUp, Send, Trophy } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import BarCard from "@/components/BarCard";
 import { BarSkeletonList } from "@/components/BarSkeleton";
@@ -222,6 +222,14 @@ export default function Orphanage() {
     refetchOnWindowFocus: false,
   });
 
+  const topAdoptedBars = useMemo(() => {
+    if (!adoptableBars.length) return [];
+    return [...adoptableBars]
+      .filter((bar: any) => (bar.usageCount || 0) > 0)
+      .sort((a: any, b: any) => (b.usageCount || 0) - (a.usageCount || 0))
+      .slice(0, 5);
+  }, [adoptableBars]);
+
   return (
     <div className="min-h-screen bg-background pt-14 pb-20 md:pb-0 md:pt-16">
       <Navigation />
@@ -240,6 +248,45 @@ export default function Orphanage() {
             </p>
           </div>
 
+          {!isLoading && topAdoptedBars.length > 0 && (
+            <div className="mb-8 p-4 rounded-xl border bg-card/50" data-testid="leaderboard">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                <h2 className="font-display font-bold text-lg">Most Adopted</h2>
+              </div>
+              <div className="space-y-2">
+                {topAdoptedBars.map((bar: any, index: number) => (
+                  <a
+                    key={bar.id}
+                    href={`#bar-${bar.id}`}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+                    data-testid={`leaderboard-item-${index}`}
+                  >
+                    <span className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                      index === 0 && "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400",
+                      index === 1 && "bg-gray-300/30 text-gray-600 dark:text-gray-400",
+                      index === 2 && "bg-amber-600/20 text-amber-700 dark:text-amber-500",
+                      index > 2 && "bg-muted text-muted-foreground"
+                    )}>
+                      {index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate group-hover:text-primary transition-colors">
+                        {bar.content.replace(/<[^>]*>/g, '').slice(0, 60)}
+                        {bar.content.length > 60 ? '...' : ''}
+                      </p>
+                      <p className="text-xs text-muted-foreground">by @{bar.user.username}</p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0">
+                      {bar.usageCount} {bar.usageCount === 1 ? 'adoption' : 'adoptions'}
+                    </Badge>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <BarSkeletonList count={3} />
           ) : adoptableBars.length === 0 ? (
@@ -253,7 +300,7 @@ export default function Orphanage() {
           ) : (
             <div className="space-y-6">
               {adoptableBars.map((bar: any) => (
-                <div key={bar.id} className="rounded-xl border bg-card overflow-hidden shadow-sm">
+                <div key={bar.id} id={`bar-${bar.id}`} className="rounded-xl border bg-card overflow-hidden shadow-sm scroll-mt-20">
                   <BarCard bar={bar} />
                   <AdoptionPanel bar={bar} />
                 </div>
