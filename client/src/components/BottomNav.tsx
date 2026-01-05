@@ -145,10 +145,10 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   })}
                 </div>
                 
-                <div className="flex flex-col justify-center gap-4 w-36 bg-primary py-4 px-3">
+                <div className="flex flex-col justify-center gap-3 w-36 bg-primary py-4 px-3">
                   <button
                     onClick={() => handleNavClick("/")}
-                    className="flex flex-col items-center gap-2 transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1 transition-all active:scale-95"
                   >
                     <img 
                       src={orphanBarsMenuLogo} 
@@ -160,13 +160,13 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   
                   <button
                     onClick={() => handleNavClick("/orphanage")}
-                    className="flex flex-col items-center gap-2 transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1 transition-all active:scale-95"
                     data-testid="nav-item-orphanage"
                   >
                     <img 
                       src={orphanageMenuLogo} 
                       alt="The Orphanage" 
-                      className="h-10 w-auto object-contain invert brightness-200"
+                      className="h-14 w-auto object-contain invert brightness-200"
                     />
                     <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHANAGE</span>
                   </button>
