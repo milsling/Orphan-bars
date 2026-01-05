@@ -97,8 +97,8 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed bottom-20 left-4 right-4 z-50 bg-card rounded-2xl overflow-hidden shadow-2xl"
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+              className="fixed bottom-20 left-4 right-4 z-50 bg-card/95 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-border/50"
             >
               <div className="flex">
                 <div className="flex-1 flex flex-col">
@@ -128,12 +128,12 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                       <button
                         key={item.id}
                         onClick={() => handleNavClick(item.path)}
-                        className="flex flex-col items-center gap-2 p-3 transition-all active:scale-95"
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all active:scale-95 hover:bg-muted/50"
                         data-testid={`nav-item-${item.label.toLowerCase().replace(' ', '-')}`}
                       >
                         <div className={cn(
-                          "relative w-12 h-12 rounded-full flex items-center justify-center transition-colors",
-                          isActive && "bg-primary"
+                          "relative w-12 h-12 rounded-full flex items-center justify-center transition-all",
+                          isActive ? "bg-primary shadow-md shadow-primary/30" : "hover:bg-muted"
                         )}>
                           {item.icon && (
                             <item.icon className={cn(

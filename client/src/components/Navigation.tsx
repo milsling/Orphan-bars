@@ -25,7 +25,7 @@ export default function Navigation() {
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 border-b border-border bg-background/80 backdrop-blur-md z-50 items-center px-6 justify-between pt-[env(safe-area-inset-top)]">
+      <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 border-b border-border/50 bg-background/90 backdrop-blur-lg z-50 items-center px-6 justify-between pt-[env(safe-area-inset-top)] shadow-sm">
         <div className="flex items-center gap-6">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
@@ -169,7 +169,7 @@ export default function Navigation() {
       </nav>
 
       {/* Mobile Top Bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 border-b border-border bg-background/90 backdrop-blur-lg z-50 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 border-b border-border/50 bg-background/95 backdrop-blur-xl z-50 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] shadow-sm">
         <Link href="/">
           <div className="flex items-center gap-1.5 cursor-pointer">
             <img src="/icon.png" alt="" className="h-6 w-6" />
