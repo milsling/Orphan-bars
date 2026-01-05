@@ -171,7 +171,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                       alt="Orphan Bars" 
                       className={cn(
                         "h-12 w-auto transition-all",
-                        menuSection === "orphanbars" ? "" : "opacity-70"
+                        menuSection === "orphanbars" ? "invert brightness-200" : "opacity-70"
                       )}
                     />
                     <span 
