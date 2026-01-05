@@ -608,6 +608,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/user/adoptions", isAuthenticated, async (req, res) => {
+    try {
+      const adoptions = await storage.getUserAdoptions(req.user!.id);
+      res.json(adoptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/bars/feed/trending", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;

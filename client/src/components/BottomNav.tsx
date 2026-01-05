@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -32,12 +32,17 @@ interface BottomNavProps {
 export function BottomNav({ onNewMessage }: BottomNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [menuSection, setMenuSection] = useState<"orphanbars" | "orphanage">("orphanbars");
   const [location, setLocation] = useLocation();
+  const [menuSection, setMenuSection] = useState<"orphanbars" | "orphanage">(
+    location.startsWith("/orphanage") ? "orphanage" : "orphanbars"
+  );
   const { currentUser } = useBars();
   const unreadCount = useUnreadMessagesCount();
   const pendingFriendRequests = usePendingFriendRequestsCount();
 
+  useEffect(() => {
+    setMenuSection(location.startsWith("/orphanage") ? "orphanage" : "orphanbars");
+  }, [location]);
   
   const getNavItems = () => {
     if (!currentUser) {
@@ -49,9 +54,10 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
 
     if (menuSection === "orphanage") {
       return [
-        { icon: DoorOpen, label: "Enter", path: "/orphanage", id: "orphanage-enter" },
-        { icon: BarChart3, label: "Stats", path: "/orphanage/stats", id: "orphanage-stats" },
-        { icon: Heart, label: "Favorites", path: "/saved", id: "orphanage-favorites" },
+        { icon: DoorOpen, label: "Browse", path: "/orphanage", id: "orphanage-browse" },
+        { icon: BarChart3, label: "Leaderboard", path: "/orphanage#leaderboard", id: "orphanage-leaderboard" },
+        { icon: Heart, label: "My Adoptions", path: "/orphanage#my-adoptions", id: "orphanage-my-adoptions" },
+        { icon: Home, label: "Back to Feed", path: "/", id: "orphanage-back" },
       ];
     }
 
@@ -74,7 +80,28 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
 
   const handleNavClick = (path: string) => {
     setIsOpen(false);
-    setLocation(path);
+    
+    // Handle hash links for scrolling to sections
+    if (path.includes('#')) {
+      const [basePath, hash] = path.split('#');
+      setLocation(basePath);
+      // Wait for navigation then scroll to element
+      setTimeout(() => {
+        const element = document.getElementById(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      setLocation(path);
+    }
+    
+    // Update menu section based on destination
+    if (path.startsWith('/orphanage')) {
+      setMenuSection('orphanage');
+    } else if (path === '/') {
+      setMenuSection('orphanbars');
+    }
   };
 
   const handleCenterClick = () => {

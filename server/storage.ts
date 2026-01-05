@@ -166,6 +166,7 @@ export interface IStorage {
   recordBarUsage(barId: string, userId: string, usageLink?: string, comment?: string): Promise<BarUsage>;
   getBarUsages(barId: string): Promise<Array<BarUsage & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> }>>;
   getBarUsageCount(barId: string): Promise<number>;
+  getUserAdoptions(userId: string): Promise<Array<BarUsage & { bar: Bar & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> } }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1503,6 +1504,29 @@ export class DatabaseStorage implements IStorage {
       .from(barUsages)
       .where(eq(barUsages.barId, barId));
     return result?.count || 0;
+  }
+
+  async getUserAdoptions(userId: string): Promise<Array<BarUsage & { bar: Bar & { user: Pick<User, 'id' | 'username' | 'avatarUrl'> } }>> {
+    const result = await db
+      .select({
+        usage: barUsages,
+        bar: bars,
+        barUser: {
+          id: users.id,
+          username: users.username,
+          avatarUrl: users.avatarUrl,
+        },
+      })
+      .from(barUsages)
+      .innerJoin(bars, eq(barUsages.barId, bars.id))
+      .innerJoin(users, eq(bars.userId, users.id))
+      .where(eq(barUsages.userId, userId))
+      .orderBy(desc(barUsages.createdAt));
+    
+    return result.map(r => ({ 
+      ...r.usage, 
+      bar: { ...r.bar, user: r.barUser }
+    }));
   }
 }
 

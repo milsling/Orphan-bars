@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Home, Users, ExternalLink, ChevronDown, ChevronUp, Send, Trophy } from "lucide-react";
+import { Home, Users, ExternalLink, ChevronDown, ChevronUp, Send, Trophy, Heart } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import BarCard from "@/components/BarCard";
 import { BarSkeletonList } from "@/components/BarSkeleton";
@@ -212,6 +212,8 @@ function AdoptionPanel({ bar }: { bar: any }) {
 }
 
 export default function Orphanage() {
+  const { currentUser } = useBars();
+  
   const { data: adoptableBars = [], isLoading } = useQuery({
     queryKey: ['adoptable-bars'],
     queryFn: async () => {
@@ -220,6 +222,16 @@ export default function Orphanage() {
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
+  });
+
+  const { data: myAdoptions = [] } = useQuery({
+    queryKey: ['my-adoptions'],
+    queryFn: async () => {
+      const res = await fetch('/api/user/adoptions', { credentials: 'include' });
+      return res.json();
+    },
+    enabled: !!currentUser,
+    staleTime: 30000,
   });
 
   const topAdoptedBars = useMemo(() => {
@@ -249,7 +261,7 @@ export default function Orphanage() {
           </div>
 
           {!isLoading && topAdoptedBars.length > 0 && (
-            <div className="mb-8 p-4 rounded-xl border bg-card/50" data-testid="leaderboard">
+            <div id="leaderboard" className="mb-8 p-4 rounded-xl border bg-card/50 scroll-mt-20" data-testid="leaderboard">
               <div className="flex items-center gap-2 mb-4">
                 <Trophy className="h-5 w-5 text-yellow-500" />
                 <h2 className="font-display font-bold text-lg">Most Adopted</h2>
@@ -281,6 +293,37 @@ export default function Orphanage() {
                     <Badge variant="secondary" className="shrink-0">
                       {bar.usageCount} {bar.usageCount === 1 ? 'adoption' : 'adoptions'}
                     </Badge>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {currentUser && myAdoptions.length > 0 && (
+            <div id="my-adoptions" className="mb-8 p-4 rounded-xl border bg-card/50 scroll-mt-20" data-testid="my-adoptions">
+              <div className="flex items-center gap-2 mb-4">
+                <Heart className="h-5 w-5 text-pink-500" />
+                <h2 className="font-display font-bold text-lg">My Adoptions</h2>
+                <Badge variant="secondary" className="ml-auto">{myAdoptions.length}</Badge>
+              </div>
+              <div className="space-y-2">
+                {myAdoptions.slice(0, 5).map((adoption: any, index: number) => (
+                  <a
+                    key={adoption.id}
+                    href={`#bar-${adoption.barId}`}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+                    data-testid={`my-adoption-${index}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate group-hover:text-primary transition-colors">
+                        {adoption.bar.content.replace(/<[^>]*>/g, '').slice(0, 60)}
+                        {adoption.bar.content.length > 60 ? '...' : ''}
+                      </p>
+                      <p className="text-xs text-muted-foreground">by @{adoption.bar.user.username}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {formatDistanceToNow(new Date(adoption.createdAt), { addSuffix: true })}
+                    </span>
                   </a>
                 ))}
               </div>
