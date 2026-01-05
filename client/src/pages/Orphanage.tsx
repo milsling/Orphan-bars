@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Home } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import BarCard from "@/components/BarCard";
 import { BarSkeletonList } from "@/components/BarSkeleton";
@@ -38,7 +39,7 @@ export default function Orphanage() {
           ) : adoptableBars.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <div className="h-16 w-16 mx-auto mb-4 opacity-50 rounded-lg bg-muted flex items-center justify-center">
-                <span className="text-3xl">🏠</span>
+                <Home className="h-8 w-8" />
               </div>
               <p className="text-lg">The Orphanage is empty</p>
               <p className="text-sm mt-2">No bars are currently available for adoption</p>
