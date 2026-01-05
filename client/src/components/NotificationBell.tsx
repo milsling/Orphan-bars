@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useLocation } from "wouter";
 
 interface NotificationActor {
   id: string;
@@ -33,7 +34,21 @@ interface Notification {
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+
+  const handleNotificationClick = (notification: Notification) => {
+    setOpen(false);
+    
+    // Navigate based on notification type
+    if (notification.barId) {
+      // Navigate to the bar
+      setLocation(`/bar/${notification.barId}`);
+    } else if (notification.actor?.username) {
+      // Navigate to actor's profile (for follows, friend requests, etc.)
+      setLocation(`/u/${notification.actor.username}`);
+    }
+  };
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["notifications-unread-count"],
@@ -97,6 +112,7 @@ export function NotificationBell() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
                   className={cn(
                     "flex items-start gap-3 p-4 cursor-pointer transition-colors hover:bg-muted/50",
                     !notification.read && "bg-primary/5"
