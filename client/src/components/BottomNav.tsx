@@ -105,8 +105,8 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                 </button>
               )}
               
-              <div className="flex gap-3">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="flex">
+                <div className="grid grid-cols-2 gap-2 flex-1">
                   {navItems.map((item) => {
                     const isActive = item.path && location === item.path;
                     return (
@@ -143,31 +143,35 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   })}
                 </div>
                 
-                <div className="flex flex-col gap-2 w-40">
-                  <div className="flex-1 rounded-xl bg-primary p-3 flex flex-col items-center justify-center">
+                <div className="w-px bg-border mx-2 self-stretch" />
+                
+                <div className="flex flex-col gap-3 w-36">
+                  <button
+                    onClick={() => handleNavClick("/")}
+                    className="flex flex-col items-center gap-2 p-2 transition-all active:scale-95"
+                  >
                     <img 
                       src={orphanBarsMenuLogo} 
                       alt="Orphan Bars" 
-                      className="h-12 w-auto mb-1"
+                      className="h-12 w-auto"
                     />
-                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHAN BARS</span>
-                  </div>
+                    <span className="text-xs text-primary" style={{ fontFamily: 'var(--font-logo)' }}>ORPHAN BARS</span>
+                  </button>
                   
                   <button
                     onClick={() => handleNavClick("/orphanage")}
                     className={cn(
-                      "flex-1 rounded-xl bg-primary/70 p-3",
-                      "flex flex-col items-center justify-center gap-1",
-                      "hover:bg-primary/80 transition-all active:scale-[0.98]"
+                      "flex flex-col items-center gap-2 p-2 transition-all active:scale-95",
+                      location === "/orphanage" && "opacity-100"
                     )}
                     data-testid="nav-item-orphanage"
                   >
                     <img 
                       src={orphanageMenuLogo} 
                       alt="The Orphanage" 
-                      className="h-10 w-auto object-contain invert brightness-200"
+                      className="h-10 w-auto object-contain dark:invert dark:brightness-200"
                     />
-                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHANAGE</span>
+                    <span className="text-xs text-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHANAGE</span>
                   </button>
                 </div>
               </div>
