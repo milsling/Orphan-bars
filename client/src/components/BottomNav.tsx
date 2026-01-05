@@ -98,7 +98,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed bottom-20 left-4 right-4 z-50 bg-card border border-border rounded-2xl overflow-hidden shadow-2xl"
+              className="fixed bottom-20 left-4 right-4 z-50 bg-card rounded-2xl overflow-hidden shadow-2xl"
             >
               <div className="flex">
                 <div className="flex-1 flex flex-col">
