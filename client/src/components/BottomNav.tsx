@@ -161,7 +161,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   <button
                     onClick={() => setMenuSection("orphanbars")}
                     className={cn(
-                      "flex-1 flex flex-col items-center justify-center gap-1 py-4 px-3 transition-all active:scale-95",
+                      "h-24 flex flex-col items-center justify-center gap-1 px-3 transition-all active:scale-95",
                       menuSection === "orphanbars" ? "bg-primary" : "bg-muted/30"
                     )}
                     data-testid="nav-section-orphanbars"
@@ -186,7 +186,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   <button
                     onClick={() => setMenuSection("orphanage")}
                     className={cn(
-                      "flex-1 flex flex-col items-center justify-center gap-0.5 py-3 px-3 transition-all active:scale-95",
+                      "h-24 flex flex-col items-center justify-center gap-0.5 px-3 transition-all active:scale-95",
                       menuSection === "orphanage" ? "bg-primary" : "bg-muted/30"
                     )}
                     data-testid="nav-section-orphanage"
@@ -195,7 +195,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                       src={orphanageMenuLogo} 
                       alt="The Orphanage" 
                       className={cn(
-                        "h-20 w-auto object-contain transition-all",
+                        "h-16 w-auto object-contain transition-all",
                         menuSection === "orphanage" ? "brightness-0 invert" : "dark:invert dark:brightness-200 opacity-70"
                       )}
                     />
