@@ -22,7 +22,8 @@ import { cn } from "@/lib/utils";
 import { useBars } from "@/context/BarContext";
 import { useUnreadMessagesCount, usePendingFriendRequestsCount } from "@/components/UnreadMessagesBadge";
 import orphanBarsMenuLogo from "@/assets/orphan-bars-menu-logo.png";
-import orphanageMenuLogo from "@/assets/orphanage-menu-logo.png";
+import orphanageFullLogoWhite from "@/assets/orphanage-full-logo-white.png";
+import orphanageFullLogoDark from "@/assets/orphanage-full-logo-dark.png";
 
 interface BottomNavProps {
   onNewMessage?: () => void;
@@ -192,20 +193,20 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                     data-testid="nav-section-orphanage"
                   >
                     <img 
-                      src={orphanageMenuLogo} 
+                      src={menuSection === "orphanage" ? orphanageFullLogoWhite : orphanageFullLogoDark} 
                       alt="The Orphanage" 
                       className={cn(
-                        "h-28 w-auto object-contain transition-all -mb-4",
-                        menuSection === "orphanage" ? "brightness-0 invert" : "dark:invert dark:brightness-200 opacity-80"
+                        "h-24 w-auto object-contain transition-all",
+                        menuSection !== "orphanage" && "dark:hidden"
                       )}
                     />
-                    <span 
-                      className={cn(
-                        "text-base font-medium transition-colors",
-                        menuSection === "orphanage" ? "text-primary-foreground" : "text-muted-foreground"
-                      )} 
-                      style={{ fontFamily: 'var(--font-logo)' }}
-                    >ORPHANAGE</span>
+                    {menuSection !== "orphanage" && (
+                      <img 
+                        src={orphanageFullLogoWhite} 
+                        alt="The Orphanage" 
+                        className="h-24 w-auto object-contain transition-all hidden dark:block opacity-80"
+                      />
+                    )}
                   </button>
                 </div>
               </div>
