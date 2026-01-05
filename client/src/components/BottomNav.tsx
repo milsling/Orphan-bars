@@ -18,8 +18,8 @@ import { SearchBar } from "@/components/SearchBar";
 import { cn } from "@/lib/utils";
 import { useBars } from "@/context/BarContext";
 import { useUnreadMessagesCount, usePendingFriendRequestsCount } from "@/components/UnreadMessagesBadge";
-import orphanageIcon from "@/assets/orphanage-icon.png";
-import orphanBarsLogo from "@/assets/logo.png";
+import orphanBarsMenuLogo from "@/assets/orphan-bars-menu-logo.png";
+import orphanageMenuLogo from "@/assets/orphanage-menu-logo.png";
 
 interface BottomNavProps {
   onNewMessage?: () => void;
@@ -146,11 +146,11 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                 <div className="flex flex-col gap-2 w-40">
                   <div className="flex-1 rounded-xl bg-primary p-3 flex flex-col items-center justify-center">
                     <img 
-                      src={orphanBarsLogo} 
+                      src={orphanBarsMenuLogo} 
                       alt="Orphan Bars" 
-                      className="h-10 w-auto mb-1"
+                      className="h-12 w-auto mb-1"
                     />
-                    <span className="text-[10px] font-bold text-primary-foreground tracking-wide">ORPHAN BARS</span>
+                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHAN BARS</span>
                   </div>
                   
                   <button
@@ -163,11 +163,11 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                     data-testid="nav-item-orphanage"
                   >
                     <img 
-                      src={orphanageIcon} 
+                      src={orphanageMenuLogo} 
                       alt="The Orphanage" 
                       className="h-10 w-auto object-contain invert brightness-200"
                     />
-                    <span className="text-[10px] font-bold text-primary-foreground tracking-wide">ORPHANAGE</span>
+                    <span className="text-xs text-primary-foreground" style={{ fontFamily: 'var(--font-logo)' }}>ORPHANAGE</span>
                   </button>
                 </div>
               </div>
