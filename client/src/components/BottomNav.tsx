@@ -187,7 +187,10 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                   </button>
                   
                   <button
-                    onClick={() => setMenuSection("orphanage")}
+                    onClick={() => {
+                      setMenuSection("orphanage");
+                      handleNavClick("/orphanage");
+                    }}
                     className={cn(
                       "h-1/2 flex flex-col items-center justify-center px-3 py-3 transition-all active:scale-95",
                       menuSection === "orphanage" ? "bg-primary" : "bg-primary/70"
