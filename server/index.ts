@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { storage } from "./storage";
+import { testDatabaseConnection } from "./db";
 import fs from "fs";
 import path from "path";
 
@@ -133,6 +134,20 @@ async function ogMiddleware(req: Request, res: Response, next: NextFunction) {
 async function startServer() {
   try {
     log("Starting server initialization...");
+    
+    // Check required environment variables
+    const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
+    const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+    if (missingVars.length > 0) {
+      log(`Warning: Missing environment variables: ${missingVars.join(', ')}`);
+    }
+    
+    // Test database connection
+    log("Testing database connection...");
+    const dbConnected = await testDatabaseConnection();
+    if (!dbConnected) {
+      log("Warning: Database connection failed, but continuing startup...");
+    }
     
     await registerRoutes(httpServer, app);
     log("Routes registered successfully");
