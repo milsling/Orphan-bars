@@ -194,7 +194,7 @@ function CommentItem({ comment, currentUserId, onDelete }: CommentItemProps) {
             data-testid={`button-dislike-comment-${comment.id}`}
           >
             <ThumbsDown className={`h-3 w-3 ${dislikeData?.disliked ? 'fill-current' : ''}`} />
-            {dislikeData?.disliked && <span>{dislikeData?.count || 0}</span>}
+            <span>{dislikeData?.count || 0}</span>
           </button>
         </div>
       </div>
@@ -749,7 +749,7 @@ export default function BarCard({ bar }: BarCardProps) {
                 data-testid={`button-dislike-${bar.id}`}
               >
                 <ThumbsDown className={`h-4 w-4 ${dislikesData?.disliked ? 'fill-current' : ''}`} />
-                {dislikesData?.disliked && <span className="text-xs">{dislikesData?.count || 0}</span>}
+                <span className="text-xs">{dislikesData?.count || 0}</span>
               </Button>
               
               <Button 
