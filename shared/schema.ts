@@ -75,6 +75,8 @@ export const bars = pgTable("bars", {
   deletedAt: timestamp("deleted_at"),
   deletedBy: varchar("deleted_by").references(() => users.id),
   deletedReason: text("deleted_reason"),
+  isLocked: boolean("is_locked").notNull().default(false),
+  lockedAt: timestamp("locked_at"),
 });
 
 export const barsRelations = relations(bars, ({ one, many }) => ({

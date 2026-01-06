@@ -717,6 +717,11 @@ export async function registerRoutes(
         return res.status(403).json({ message: "You can only edit your own posts" });
       }
 
+      // Check if bar is locked (authenticated)
+      if ((existingBar as any).isLocked) {
+        return res.status(403).json({ message: "This bar is locked and cannot be edited. Locked bars have permanent proof-of-origin certificates." });
+      }
+
       const updates: Record<string, any> = {};
       if (result.data.content !== undefined) updates.content = result.data.content;
       if (result.data.explanation !== undefined) updates.explanation = result.data.explanation;
