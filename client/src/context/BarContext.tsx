@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext, ReactNode, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { User, BarWithUser } from "@shared/schema";
@@ -33,6 +33,8 @@ const BarContext = createContext<BarContextType | undefined>(undefined);
 
 export function BarProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
 
   // Fetch current user
   const { data: currentUser = null, isLoading: isLoadingUser } = useQuery<User | null>({
@@ -85,6 +87,78 @@ export function BarProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(['currentUser'], null);
     },
   });
+
+  // Global WebSocket connection for real-time messages
+  const connectWebSocket = useCallback(() => {
+    if (!currentUser) return;
+    if (typeof window === "undefined" || !window.WebSocket) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+    ws.onopen = () => {
+      console.log("Global WebSocket connected");
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === "newMessage" || data.type === "batchMessages") {
+          // Invalidate message-related queries
+          queryClient.invalidateQueries({ queryKey: ["conversations"] });
+          queryClient.invalidateQueries({ queryKey: ["messages"] });
+          queryClient.invalidateQueries({ queryKey: ["unreadMessages"] });
+          
+          // Dispatch global event for components listening
+          window.dispatchEvent(new CustomEvent("newMessage", { detail: data }));
+        }
+      } catch (error) {
+        console.error("WebSocket message parse error:", error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("Global WebSocket disconnected");
+      // Reconnect after 3 seconds if user is still logged in
+      if (currentUser) {
+        reconnectTimeoutRef.current = window.setTimeout(() => {
+          connectWebSocket();
+        }, 3000);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    wsRef.current = ws;
+  }, [currentUser, queryClient]);
+
+  const disconnectWebSocket = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  }, []);
+
+  // Connect/disconnect WebSocket based on user login state
+  useEffect(() => {
+    if (currentUser) {
+      connectWebSocket();
+    } else {
+      disconnectWebSocket();
+    }
+
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [currentUser, connectWebSocket, disconnectWebSocket]);
 
   // Create bar mutation
   const createBarMutation = useMutation({

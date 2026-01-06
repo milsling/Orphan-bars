@@ -31,8 +31,8 @@ export function useUnreadMessagesCount() {
       return res.json();
     },
     enabled: !!currentUser,
-    staleTime: 30000,
-    refetchInterval: 30000,
+    staleTime: 5000,
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
