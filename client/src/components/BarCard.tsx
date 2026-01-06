@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BarWithUser } from "@shared/schema";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag, Info, LockKeyhole } from "lucide-react";
 import { BarMediaPlayer } from "@/components/BarMediaPlayer";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { shareContent, getBarShareData } from "@/lib/share";
@@ -10,7 +10,8 @@ import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -241,8 +242,10 @@ export default function BarCard({ bar }: BarCardProps) {
   const [showOriginalityReport, setShowOriginalityReport] = useState(false);
   const [originalityData, setOriginalityData] = useState<Array<{ id: string; proofBarId: string; similarity: number; username?: string }>>([]);
   const [isCheckingOriginality, setIsCheckingOriginality] = useState(false);
+  const [isLockDialogOpen, setIsLockDialogOpen] = useState(false);
 
   const isOwner = currentUser?.id === bar.user.id;
+  const isLocked = (bar as any).isLocked;
 
   // Use pre-fetched like data from bar if available, otherwise fetch
   const hasPreFetchedLikes = 'liked' in bar && 'likeCount' in bar;
@@ -432,6 +435,30 @@ export default function BarCard({ bar }: BarCardProps) {
     },
   });
 
+  const lockMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/bars/${bar.id}/lock`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error((await res.json()).message);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bars'] });
+      queryClient.invalidateQueries({ queryKey: ['bars-featured'] });
+      queryClient.invalidateQueries({ queryKey: ['bars-trending'] });
+      setIsLockDialogOpen(false);
+      toast({ 
+        title: "Bar Locked & Authenticated!", 
+        description: "Your bar now has a permanent proof-of-origin certificate and cannot be edited." 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const { offset, handlers: swipeHandlers } = useSwipeGesture({
     onSwipeRight: () => {
       if (currentUser && !likesData?.liked) {
@@ -587,10 +614,28 @@ export default function BarCard({ bar }: BarCardProps) {
                 </DropdownMenuItem>
                 {isOwner && (
                   <>
-                    <DropdownMenuItem onClick={() => { setEditContent(stripHtml(bar.content)); setIsEditOpen(true); }} data-testid={`button-edit-${bar.id}`}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
+                    {!isLocked && (
+                      <DropdownMenuItem onClick={() => { setEditContent(stripHtml(bar.content)); setIsEditOpen(true); }} data-testid={`button-edit-${bar.id}`}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                    )}
+                    {!isLocked && bar.proofBarId && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setIsLockDialogOpen(true)} className="text-primary" data-testid={`button-lock-${bar.id}`}>
+                          <LockKeyhole className="h-4 w-4 mr-2" />
+                          Lock & Authenticate
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {isLocked && (
+                      <DropdownMenuItem disabled className="text-muted-foreground opacity-50">
+                        <Lock className="h-4 w-4 mr-2" />
+                        Locked (Cannot Edit)
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setIsDeleteOpen(true)} className="text-destructive" data-testid={`button-delete-${bar.id}`}>
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete
@@ -644,7 +689,7 @@ export default function BarCard({ bar }: BarCardProps) {
               <BarMediaPlayer beatLink={(bar as any).beatLink} compact />
             )}
 
-            {bar.proofBarId && (
+            {bar.proofBarId && isLocked && (
               <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg p-3 space-y-2" data-testid={`proof-section-${bar.id}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -968,6 +1013,43 @@ export default function BarCard({ bar }: BarCardProps) {
               data-testid="button-confirm-delete"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isLockDialogOpen} onOpenChange={setIsLockDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <LockKeyhole className="h-5 w-5 text-primary" />
+              Lock & Authenticate This Bar?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Locking your bar will:</p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li><strong>Generate a permanent proof-of-origin certificate</strong> that can be shared and verified</li>
+                <li><strong>Make the bar uneditable</strong> - you won't be able to change the content after locking</li>
+                <li><strong>Protect your authorship</strong> - the certificate proves you created this bar at this time</li>
+              </ul>
+              <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-start gap-2">
+                <Info className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-200">
+                  <strong>This action cannot be undone.</strong> Once locked, you cannot edit the bar content. 
+                  Make sure you're happy with your bar before locking.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => lockMutation.mutate()}
+              disabled={lockMutation.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              data-testid="button-confirm-lock"
+            >
+              {lockMutation.isPending ? "Locking..." : "Lock & Authenticate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
