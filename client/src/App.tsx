@@ -24,6 +24,7 @@ import Achievements from "@/pages/Achievements";
 import { BarProvider } from "@/context/BarContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
+import { SwipeBackNavigation } from "@/components/SwipeBackNavigation";
 
 function Router() {
   const [location] = useLocation();
@@ -79,7 +80,9 @@ function App() {
         <TooltipProvider>
           <MaintenanceBanner />
           <Toaster />
-          <Router />
+          <SwipeBackNavigation>
+            <Router />
+          </SwipeBackNavigation>
         </TooltipProvider>
       </BarProvider>
     </QueryClientProvider>
