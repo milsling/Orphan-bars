@@ -402,23 +402,11 @@ export async function registerRoutes(
         moderationPhraseId: moderationResult.matchedPhraseId || null,
       };
 
-      // Create the bar first
+      // Create the bar (no proofBarId yet - assigned when locked)
       const bar = await storage.createBar(barData);
       
-      let proofBarId: string | null = null;
-      let proofHash: string | null = null;
-      
-      // Only generate proof-of-origin data for original content
-      if (bar.isOriginal) {
-        const sequenceNum = await storage.getNextBarSequence();
-        proofBarId = `orphanbars-#${sequenceNum.toString().padStart(5, '0')}`;
-        proofHash = generateProofHash(bar.content, bar.createdAt, bar.userId, proofBarId);
-      }
-      
-      // Update bar with proof data (only if original) and other metadata
+      // Update bar with metadata (proofBarId assigned later when user locks the bar)
       await db.update(bars).set({ 
-        ...(proofBarId && { proofBarId }),
-        ...(proofHash && { proofHash }),
         permissionStatus: req.body.permissionStatus || "share_only",
         barType: req.body.barType || "single_bar",
         fullRapLink: req.body.fullRapLink || null,
@@ -453,8 +441,6 @@ export async function registerRoutes(
       
       res.json({ 
         ...bar, 
-        proofBarId,
-        proofHash,
         duplicateWarnings: duplicateWarnings.length > 0 ? duplicateWarnings : undefined,
         newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
         pendingReview: moderationResult.flagged,
@@ -784,7 +770,16 @@ export async function registerRoutes(
         return res.status(400).json({ message: "This bar is already locked" });
       }
 
-      const bar = await storage.lockBar(req.params.id, req.user!.id);
+      if (!existingBar.isOriginal) {
+        return res.status(400).json({ message: "Only original bars can be locked and authenticated" });
+      }
+
+      // Generate proofBarId and proofHash NOW at lock time (not at post time)
+      const sequenceNum = await storage.getNextBarSequence();
+      const proofBarId = `orphanbars-#${sequenceNum.toString().padStart(5, '0')}`;
+      const proofHash = generateProofHash(existingBar.content, existingBar.createdAt, existingBar.userId, proofBarId);
+
+      const bar = await storage.lockBar(req.params.id, req.user!.id, proofBarId, proofHash);
       if (!bar) {
         return res.status(500).json({ message: "Failed to lock bar" });
       }

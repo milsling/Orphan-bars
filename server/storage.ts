@@ -334,10 +334,15 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async lockBar(id: string, userId: string): Promise<Bar | undefined> {
+  async lockBar(id: string, userId: string, proofBarId: string, proofHash: string): Promise<Bar | undefined> {
     const [bar] = await db
       .update(bars)
-      .set({ isLocked: true, lockedAt: new Date() })
+      .set({ 
+        isLocked: true, 
+        lockedAt: new Date(),
+        proofBarId,
+        proofHash,
+      })
       .where(and(eq(bars.id, id), eq(bars.userId, userId)))
       .returning();
     return bar || undefined;

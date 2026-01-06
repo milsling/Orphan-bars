@@ -620,7 +620,7 @@ export default function BarCard({ bar }: BarCardProps) {
                         Edit
                       </DropdownMenuItem>
                     )}
-                    {!isLocked && bar.proofBarId && (
+                    {!isLocked && bar.isOriginal && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setIsLockDialogOpen(true)} className="text-primary" data-testid={`button-lock-${bar.id}`}>
