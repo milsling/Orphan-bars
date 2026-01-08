@@ -298,8 +298,11 @@ export default function BarCard({ bar }: BarCardProps) {
       if (context?.previousLikes) {
         queryClient.setQueryData(['likes', bar.id], context.previousLikes);
       }
+      console.error('[LIKE ERROR]', error.message);
       if (error.message.includes("Not authenticated")) {
         toast({ title: "Login required", description: "You need to be logged in to like posts", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: "Failed to save like. Please try again.", variant: "destructive" });
       }
     },
     onSettled: () => {

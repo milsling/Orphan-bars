@@ -556,14 +556,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async toggleLike(userId: string, barId: string): Promise<boolean> {
+    console.log(`[STORAGE] toggleLike called: userId=${userId}, barId=${barId}`);
     const [existing] = await db.select().from(likes).where(and(eq(likes.userId, userId), eq(likes.barId, barId)));
     if (existing) {
       await db.delete(likes).where(eq(likes.id, existing.id));
+      console.log(`[STORAGE] User ${userId} unliked bar ${barId}`);
       return false;
     } else {
       // Remove dislike if exists (mutual exclusivity)
       await db.delete(dislikes).where(and(eq(dislikes.userId, userId), eq(dislikes.barId, barId)));
-      await db.insert(likes).values({ userId, barId });
+      const [inserted] = await db.insert(likes).values({ userId, barId }).returning();
+      console.log(`[STORAGE] User ${userId} liked bar ${barId}, inserted:`, inserted);
       return true;
     }
   }
