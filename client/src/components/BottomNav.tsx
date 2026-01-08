@@ -154,7 +154,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                         menuSection === "orphanbars" ? "text-primary-foreground" : "text-primary-foreground/70"
                       )} 
                       style={{ fontFamily: 'var(--font-logo)' }}
-                    >Orphan Bars</span>
+                    >ORPHAN BARS</span>
                   </button>
                   
                   <button

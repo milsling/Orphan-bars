@@ -31,7 +31,7 @@ export default function Navigation() {
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
               <img src={headerLogo} alt="" className="h-8 w-8" />
-              <span className="font-logo leading-none text-5xl xl:text-6xl">Orphan Bars</span>
+              <span className="font-logo leading-none text-5xl xl:text-6xl">ORPHAN BARS</span>
             </div>
           </Link>
           <SearchBar className="w-64" />
@@ -174,7 +174,7 @@ export default function Navigation() {
         <Link href="/">
           <div className="flex items-center gap-1.5 cursor-pointer">
             <img src={headerLogo} alt="" className="h-6 w-6" />
-            <span className="font-logo text-sm whitespace-nowrap">Orphan Bars</span>
+            <span className="font-logo text-sm whitespace-nowrap">ORPHAN BARS</span>
           </div>
         </Link>
         <div className="flex items-center gap-2">

@@ -610,7 +610,7 @@ export default function Auth() {
           <Link href="/">
             <div className="flex items-center justify-center gap-2 mb-4 cursor-pointer hover:opacity-80 transition-opacity">
               <img src={iconUrl} alt="Orphan Bars" className="h-10 w-10" />
-              <span className="font-logo text-3xl">Orphan Bars</span>
+              <span className="font-logo text-3xl">ORPHAN BARS</span>
             </div>
           </Link>
           <p className="text-muted-foreground max-w-sm mx-auto">
