@@ -457,12 +457,17 @@ export async function registerRoutes(
       
       // Include like/dislike counts and user's liked/disliked status for each bar
       const userId = req.isAuthenticated() ? req.user!.id : null;
+      console.log(`[BARS] Fetching bars for userId: ${userId}, authenticated: ${req.isAuthenticated()}`);
+      
       const barsWithEngagement = await Promise.all(
         bars.map(async (bar) => {
           const likeCount = await storage.getLikeCount(bar.id);
           const liked = userId ? await storage.hasUserLiked(userId, bar.id) : false;
           const dislikeCount = await storage.getDislikeCount(bar.id);
           const disliked = userId ? await storage.hasUserDisliked(userId, bar.id) : false;
+          if (liked) {
+            console.log(`[BARS] Bar ${bar.id} is liked by user ${userId}`);
+          }
           return { ...bar, likeCount, liked, dislikeCount, disliked };
         })
       );
