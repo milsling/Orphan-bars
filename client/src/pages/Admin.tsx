@@ -1360,61 +1360,228 @@ export default function Admin() {
                         data-testid="input-achievement-description"
                       />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="achievement-condition">Condition</Label>
-                        <Select value={newAchievementCondition} onValueChange={setNewAchievementCondition}>
-                          <SelectTrigger id="achievement-condition" data-testid="select-achievement-condition">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {conditionOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          {conditionOptions.find(o => o.value === newAchievementCondition)?.description}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="achievement-threshold">Threshold</Label>
-                        <Input
-                          id="achievement-threshold"
-                          type="number"
-                          min={1}
-                          value={newAchievementThreshold}
-                          onChange={(e) => setNewAchievementThreshold(parseInt(e.target.value) || 1)}
-                          data-testid="input-achievement-threshold"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="achievement-rarity">Rarity</Label>
-                        <Select value={newAchievementRarity} onValueChange={setNewAchievementRarity}>
-                          <SelectTrigger id="achievement-rarity" data-testid="select-achievement-rarity">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="common">Common</SelectItem>
-                            <SelectItem value="uncommon">Uncommon</SelectItem>
-                            <SelectItem value="rare">Rare</SelectItem>
-                            <SelectItem value="epic">Epic</SelectItem>
-                            <SelectItem value="legendary">Legendary</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Switch
+                        id="advanced-mode"
+                        checked={useAdvancedMode}
+                        onCheckedChange={(checked) => {
+                          setUseAdvancedMode(checked);
+                          if (!checked) resetAdvancedMode();
+                        }}
+                        data-testid="switch-advanced-mode"
+                      />
+                      <Label htmlFor="advanced-mode" className="cursor-pointer">
+                        Advanced Mode (combine multiple conditions with AND/OR)
+                      </Label>
                     </div>
+
+                    {!useAdvancedMode ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="achievement-condition">Condition</Label>
+                          <Select value={newAchievementCondition} onValueChange={setNewAchievementCondition}>
+                            <SelectTrigger id="achievement-condition" data-testid="select-achievement-condition">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {conditionOptions.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            {conditionOptions.find(o => o.value === newAchievementCondition)?.description}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="achievement-threshold">Threshold</Label>
+                          <Input
+                            id="achievement-threshold"
+                            type="number"
+                            min={1}
+                            value={newAchievementThreshold}
+                            onChange={(e) => setNewAchievementThreshold(parseInt(e.target.value) || 1)}
+                            data-testid="input-achievement-threshold"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="achievement-rarity">Rarity</Label>
+                          <Select value={newAchievementRarity} onValueChange={setNewAchievementRarity}>
+                            <SelectTrigger id="achievement-rarity" data-testid="select-achievement-rarity">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="common">Common</SelectItem>
+                              <SelectItem value="uncommon">Uncommon</SelectItem>
+                              <SelectItem value="rare">Rare</SelectItem>
+                              <SelectItem value="epic">Epic</SelectItem>
+                              <SelectItem value="legendary">Legendary</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Label>Logic:</Label>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant={ruleOperator === "AND" ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setRuleOperator("AND")}
+                              data-testid="button-operator-and"
+                            >
+                              AND (all must be true)
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={ruleOperator === "OR" ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setRuleOperator("OR")}
+                              data-testid="button-operator-or"
+                            >
+                              OR (any can be true)
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {ruleConditions.map((cond, idx) => (
+                            <div key={cond.id} className="flex items-start gap-2 p-3 border border-border rounded-lg bg-card">
+                              <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                                <Select
+                                  value={cond.metric}
+                                  onValueChange={(v) => updateRuleCondition(cond.id, { metric: v })}
+                                >
+                                  <SelectTrigger data-testid={`select-condition-metric-${idx}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {conditionOptions.map(opt => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                
+                                {cond.metric === "bars_with_keyword" && (
+                                  <Input
+                                    placeholder="Keyword (e.g., Christmas)"
+                                    value={cond.keyword || ""}
+                                    onChange={(e) => updateRuleCondition(cond.id, { keyword: e.target.value })}
+                                    data-testid={`input-condition-keyword-${idx}`}
+                                  />
+                                )}
+                                
+                                <Select
+                                  value={cond.comparator}
+                                  onValueChange={(v) => updateRuleCondition(cond.id, { comparator: v })}
+                                >
+                                  <SelectTrigger data-testid={`select-condition-comparator-${idx}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value=">=">at least (≥)</SelectItem>
+                                    <SelectItem value=">">more than (&gt;)</SelectItem>
+                                    <SelectItem value="=">exactly (=)</SelectItem>
+                                    <SelectItem value="<">less than (&lt;)</SelectItem>
+                                    <SelectItem value="<=">at most (≤)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={cond.value}
+                                  onChange={(e) => updateRuleCondition(cond.id, { value: parseInt(e.target.value) || 0 })}
+                                  data-testid={`input-condition-value-${idx}`}
+                                />
+                              </div>
+                              
+                              {ruleConditions.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeRuleCondition(cond.id)}
+                                  className="text-destructive hover:bg-destructive/10"
+                                  data-testid={`button-remove-condition-${idx}`}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addRuleCondition}
+                          className="w-full"
+                          data-testid="button-add-condition"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Condition
+                        </Button>
+                        
+                        {ruleConditions.length > 0 && (
+                          <div className="p-3 bg-muted/50 rounded-lg">
+                            <p className="text-sm font-medium mb-1">Preview:</p>
+                            <p className="text-sm text-muted-foreground">
+                              Unlock when: {generateRulePreview()}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="achievement-rarity-adv">Rarity</Label>
+                            <Select value={newAchievementRarity} onValueChange={setNewAchievementRarity}>
+                              <SelectTrigger id="achievement-rarity-adv" data-testid="select-achievement-rarity-adv">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="common">Common</SelectItem>
+                                <SelectItem value="uncommon">Uncommon</SelectItem>
+                                <SelectItem value="rare">Rare</SelectItem>
+                                <SelectItem value="epic">Epic</SelectItem>
+                                <SelectItem value="legendary">Legendary</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     <Button
-                      onClick={() => createAchievementMutation.mutate({
-                        name: newAchievementName,
-                        emoji: newAchievementEmoji,
-                        description: newAchievementDescription,
-                        rarity: newAchievementRarity,
-                        conditionType: newAchievementCondition,
-                        threshold: newAchievementThreshold,
-                      })}
+                      onClick={() => {
+                        if (useAdvancedMode) {
+                          createAchievementMutation.mutate({
+                            name: newAchievementName,
+                            emoji: newAchievementEmoji,
+                            description: newAchievementDescription,
+                            rarity: newAchievementRarity,
+                            conditionType: ruleConditions[0]?.metric || "bars_posted",
+                            threshold: ruleConditions[0]?.value || 1,
+                            ruleTree: buildRuleTree(),
+                          });
+                        } else {
+                          createAchievementMutation.mutate({
+                            name: newAchievementName,
+                            emoji: newAchievementEmoji,
+                            description: newAchievementDescription,
+                            rarity: newAchievementRarity,
+                            conditionType: newAchievementCondition,
+                            threshold: newAchievementThreshold,
+                          });
+                        }
+                      }}
                       disabled={!newAchievementName.trim() || !newAchievementEmoji.trim() || !newAchievementDescription.trim() || createAchievementMutation.isPending}
                       className="w-full"
                       data-testid="button-create-achievement"

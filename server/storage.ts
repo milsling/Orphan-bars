@@ -574,6 +574,18 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.select({ count: count() }).from(likes).where(eq(likes.barId, barId));
     return result?.count || 0;
   }
+  
+  // Get like count excluding self-likes (for achievement calculations)
+  async getLikeCountExcludingSelf(barId: string, barOwnerId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(likes)
+      .where(and(
+        eq(likes.barId, barId),
+        ne(likes.userId, barOwnerId) // Exclude self-likes
+      ));
+    return result?.count || 0;
+  }
 
   async hasUserLiked(userId: string, barId: string): Promise<boolean> {
     const [existing] = await db.select().from(likes).where(and(eq(likes.userId, userId), eq(likes.barId, barId)));
@@ -1382,10 +1394,14 @@ export class DatabaseStorage implements IStorage {
     let topBarLikes = 0;
     
     if (barIds.length > 0) {
+      // Exclude self-likes: don't count likes where the liker is the bar owner
       const likeCounts = await db
         .select({ barId: likes.barId, count: count() })
         .from(likes)
-        .where(sql`${likes.barId} IN (${sql.join(barIds.map(id => sql`${id}`), sql`, `)})`)
+        .where(and(
+          sql`${likes.barId} IN (${sql.join(barIds.map(id => sql`${id}`), sql`, `)})`,
+          ne(likes.userId, userId) // Exclude self-likes
+        ))
         .groupBy(likes.barId);
       
       for (const lc of likeCounts) {
@@ -1788,10 +1804,10 @@ export class DatabaseStorage implements IStorage {
       .from(barUsages)
       .where(eq(barUsages.userId, userId));
     
-    // Check controversial bar
+    // Check controversial bar (exclude self-likes)
     let hasControversialBar = false;
     for (const bar of userBars) {
-      const likeCount = await this.getLikeCount(bar.id);
+      const likeCount = await this.getLikeCountExcludingSelf(bar.id, userId);
       const dislikeCount = await this.getDislikeCount(bar.id);
       if (dislikeCount > likeCount && (likeCount + dislikeCount) >= 5) {
         hasControversialBar = true;
@@ -1956,7 +1972,7 @@ export class DatabaseStorage implements IStorage {
           case "controversial_bar": {
             const userBars = await db.select({ id: bars.id }).from(bars).where(eq(bars.userId, userId));
             for (const bar of userBars) {
-              const likeCount = await this.getLikeCount(bar.id);
+              const likeCount = await this.getLikeCountExcludingSelf(bar.id, userId);
               const dislikeCount = await this.getDislikeCount(bar.id);
               if (dislikeCount > likeCount && (likeCount + dislikeCount) >= threshold) {
                 meetsCondition = true;
