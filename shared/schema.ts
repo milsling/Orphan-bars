@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, unique, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, unique, integer, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -346,6 +346,22 @@ export type AchievementConditionType = typeof achievementConditionTypes[number];
 
 export const achievementApprovalStatusOptions = ["pending", "approved", "rejected"] as const;
 
+// Rule tree types for compound achievement conditions
+export type AchievementCondition = {
+  type: "condition";
+  metric: AchievementConditionType;
+  comparator: ">=" | ">" | "=" | "<" | "<=";
+  value: number;
+};
+
+export type AchievementRuleGroup = {
+  type: "group";
+  operator: "AND" | "OR";
+  children: (AchievementCondition | AchievementRuleGroup)[];
+};
+
+export type AchievementRuleTree = AchievementCondition | AchievementRuleGroup;
+
 export const customAchievements = pgTable("custom_achievements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -354,6 +370,7 @@ export const customAchievements = pgTable("custom_achievements", {
   rarity: text("rarity").notNull().default("common"),
   conditionType: text("condition_type").notNull(),
   threshold: integer("threshold").notNull().default(1),
+  ruleTree: jsonb("rule_tree"), // For compound conditions (AND/OR logic)
   isActive: boolean("is_active").notNull().default(true),
   approvalStatus: text("approval_status").notNull().default("approved"), // pending, approved, rejected
   createdBy: varchar("created_by").references(() => users.id),
