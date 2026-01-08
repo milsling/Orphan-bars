@@ -113,9 +113,9 @@ export default function Profile() {
                 </Avatar>
                 {currentUser.isOwner && (
                   <img 
-                    src="https://as2.ftcdn.net/jpg/11/81/07/69/1000_F_1181076937_61xtMn8A8yu3s1deYQLfUuaNlejIm5yn.webp"
+                    src="/owner-crown.png"
                     alt="Owner crown"
-                    className="absolute -top-4 -right-2 md:-top-5 md:-right-3 w-10 h-10 md:w-14 md:h-14 rotate-[25deg] drop-shadow-lg pointer-events-none"
+                    className="absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-12 md:w-20 md:h-16 rotate-[-8deg] drop-shadow-lg pointer-events-none"
                   />
                 )}
               </div>

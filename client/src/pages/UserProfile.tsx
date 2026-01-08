@@ -256,9 +256,9 @@ export default function UserProfile() {
               </Avatar>
               {user.isOwner && (
                 <img 
-                  src="https://as2.ftcdn.net/jpg/11/81/07/69/1000_F_1181076937_61xtMn8A8yu3s1deYQLfUuaNlejIm5yn.webp"
+                  src="/owner-crown.png"
                   alt="Owner crown"
-                  className="absolute -top-3 -right-1 w-8 h-8 rotate-[25deg] drop-shadow-lg pointer-events-none"
+                  className="absolute -top-6 left-1/2 -translate-x-1/2 w-14 h-10 rotate-[-8deg] drop-shadow-lg pointer-events-none"
                 />
               )}
             </div>
