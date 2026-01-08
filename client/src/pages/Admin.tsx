@@ -1480,7 +1480,48 @@ export default function Admin() {
                                 </div>
                                 <p className="text-sm text-muted-foreground">{achievement.description}</p>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  {conditionOptions.find(o => o.value === achievement.conditionType)?.label} ({achievement.threshold})
+                                  {conditionOptions.find(o => o.value === achievement.conditionType)?.label} 
+                                  {editingAchievement?.id === achievement.id ? (
+                                    <div className="inline-flex items-center gap-2 ml-2">
+                                      <Input
+                                        type="number"
+                                        className="w-16 h-6 text-[10px] px-1"
+                                        value={editingAchievement.threshold}
+                                        onChange={(e) => setEditingAchievement({
+                                          ...editingAchievement,
+                                          threshold: parseInt(e.target.value) || 1
+                                        })}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-green-500"
+                                        onClick={() => updateAchievementMutation.mutate(editingAchievement)}
+                                      >
+                                        <Check className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-red-500"
+                                        onClick={() => setEditingAchievement(null)}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1">
+                                      ({achievement.threshold})
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                                        onClick={() => setEditingAchievement({ ...achievement })}
+                                      >
+                                        <Pencil className="h-2 w-2" />
+                                      </Button>
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                             </div>
