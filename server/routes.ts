@@ -792,9 +792,39 @@ export async function registerRoutes(
 
   // Like routes
   app.post("/api/bars/:id/like", isAuthenticated, async (req, res) => {
+    const startTime = Date.now();
+    const logDetails: any = {
+      barId: req.params.id,
+      userId: req.user!.id,
+      username: req.user!.username,
+      timestamp: new Date().toISOString(),
+    };
+    
     try {
+      // Check if bar exists first
+      const existingBar = await storage.getBarById(req.params.id);
+      logDetails.barExists = !!existingBar;
+      logDetails.barOwnerId = existingBar?.userId;
+      
+      if (!existingBar) {
+        logDetails.error = "Bar not found";
+        await storage.createDebugLog({
+          action: "like",
+          userId: req.user!.id,
+          targetId: req.params.id,
+          details: JSON.stringify(logDetails),
+          success: false,
+          errorMessage: "Bar not found",
+        });
+        return res.status(404).json({ message: "Bar not found" });
+      }
+      
       const liked = await storage.toggleLike(req.user!.id, req.params.id);
       const count = await storage.getLikeCount(req.params.id);
+      
+      logDetails.liked = liked;
+      logDetails.newLikeCount = count;
+      logDetails.duration = Date.now() - startTime;
       
       // Send notification if liked (not unliked) and not own bar
       if (liked) {
@@ -807,9 +837,11 @@ export async function registerRoutes(
             barId: bar.id,
             message: `@${req.user!.username} liked your bar`
           });
+          logDetails.notificationSent = true;
           
           // Check achievements for the bar owner (they received a like)
           const newAchievements = await storage.checkAndUnlockAchievements(bar.userId);
+          logDetails.newAchievements = newAchievements;
           for (const achievementId of newAchievements) {
             const achievement = ACHIEVEMENTS[achievementId];
             await storage.createNotification({
@@ -821,8 +853,31 @@ export async function registerRoutes(
         }
       }
       
+      // Log successful like action
+      await storage.createDebugLog({
+        action: "like",
+        userId: req.user!.id,
+        targetId: req.params.id,
+        details: JSON.stringify(logDetails),
+        success: true,
+      });
+      
       res.json({ liked, count });
     } catch (error: any) {
+      logDetails.error = error.message;
+      logDetails.stack = error.stack;
+      logDetails.duration = Date.now() - startTime;
+      
+      // Log failed like action
+      await storage.createDebugLog({
+        action: "like",
+        userId: req.user!.id,
+        targetId: req.params.id,
+        details: JSON.stringify(logDetails),
+        success: false,
+        errorMessage: error.message,
+      });
+      
       res.status(500).json({ message: error.message });
     }
   });
@@ -839,11 +894,24 @@ export async function registerRoutes(
 
   // Dislike routes
   app.post("/api/bars/:id/dislike", isAuthenticated, async (req, res) => {
+    const startTime = Date.now();
+    const logDetails: any = {
+      barId: req.params.id,
+      userId: req.user!.id,
+      username: req.user!.username,
+      timestamp: new Date().toISOString(),
+    };
+    
     try {
       const disliked = await storage.toggleDislike(req.user!.id, req.params.id);
       const count = await storage.getDislikeCount(req.params.id);
       const likeCount = await storage.getLikeCount(req.params.id);
       const liked = await storage.hasUserLiked(req.user!.id, req.params.id);
+      
+      logDetails.disliked = disliked;
+      logDetails.newDislikeCount = count;
+      logDetails.likeCount = likeCount;
+      logDetails.duration = Date.now() - startTime;
       
       // Send notification if disliked (not undisliked) and not own bar
       if (disliked) {
@@ -856,11 +924,34 @@ export async function registerRoutes(
             barId: bar.id,
             message: `@${req.user!.username} disliked your bar`
           });
+          logDetails.notificationSent = true;
         }
       }
       
+      // Log successful dislike action
+      await storage.createDebugLog({
+        action: "dislike",
+        userId: req.user!.id,
+        targetId: req.params.id,
+        details: JSON.stringify(logDetails),
+        success: true,
+      });
+      
       res.json({ disliked, count, likeCount, liked });
     } catch (error: any) {
+      logDetails.error = error.message;
+      logDetails.stack = error.stack;
+      logDetails.duration = Date.now() - startTime;
+      
+      await storage.createDebugLog({
+        action: "dislike",
+        userId: req.user!.id,
+        targetId: req.params.id,
+        details: JSON.stringify(logDetails),
+        success: false,
+        errorMessage: error.message,
+      });
+      
       res.status(500).json({ message: error.message });
     }
   });
@@ -1991,6 +2082,34 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Bar not found in archive" });
       }
       res.json(bar);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Debug log routes (admin or owner)
+  const isAdminOrOwner: typeof isAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated() && (req.user?.isAdmin || req.user?.isOwner)) {
+      return next();
+    }
+    return res.status(403).json({ message: "Admin or owner access required" });
+  };
+
+  app.get("/api/admin/debug-logs", isAdminOrOwner, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const action = req.query.action as string | undefined;
+      const logs = await storage.getDebugLogs(limit, action);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/debug-logs", isOwner, async (req, res) => {
+    try {
+      await storage.clearDebugLogs();
+      res.json({ success: true, message: "Debug logs cleared" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

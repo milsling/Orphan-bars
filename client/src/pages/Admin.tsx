@@ -384,6 +384,38 @@ export default function Admin() {
     },
   });
 
+  // Debug logs query and mutations (owner only)
+  const [debugFilter, setDebugFilter] = useState<string>("all");
+  const { data: debugLogs = [], isLoading: isLoadingDebugLogs, refetch: refetchDebugLogs } = useQuery<any[]>({
+    queryKey: ['admin', 'debug-logs', debugFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: '100' });
+      if (debugFilter !== 'all') params.set('action', debugFilter);
+      const res = await fetch(`/api/admin/debug-logs?${params}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch debug logs');
+      return res.json();
+    },
+    enabled: !!currentUser?.isOwner,
+  });
+
+  const clearDebugLogsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/admin/debug-logs', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to clear debug logs');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'debug-logs'] });
+      toast({ title: "Debug logs cleared" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const conditionOptions = [
     { value: "bars_posted", label: "Bars Posted", description: "Post X number of bars" },
     { value: "likes_received", label: "Total Likes Received", description: "Receive X total likes across all bars" },
@@ -552,6 +584,12 @@ export default function Admin() {
               <TabsTrigger value="achievements" className="gap-1 text-xs px-2">
                 <Trophy className="h-4 w-4" />
                 <span className="hidden sm:inline">Badges</span>
+              </TabsTrigger>
+            )}
+            {currentUser?.isOwner && (
+              <TabsTrigger value="debug" className="gap-1 text-xs px-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">Logs</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -1343,6 +1381,160 @@ export default function Admin() {
                       </div>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {/* Debug Logs Tab (Owner Only) */}
+          {currentUser?.isOwner && (
+            <TabsContent value="debug">
+              <Card className="border-border bg-card/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                      Debug Logs
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={debugFilter} onValueChange={setDebugFilter}>
+                        <SelectTrigger className="w-32" data-testid="select-debug-filter">
+                          <SelectValue placeholder="Filter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Actions</SelectItem>
+                          <SelectItem value="like">Likes</SelectItem>
+                          <SelectItem value="dislike">Dislikes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => refetchDebugLogs()}
+                        data-testid="button-refresh-logs"
+                      >
+                        Refresh
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" data-testid="button-clear-logs">
+                            Clear All
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Clear Debug Logs</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete all debug logs. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => clearDebugLogsMutation.mutate()}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Clear All Logs
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingDebugLogs ? (
+                    <p className="text-muted-foreground">Loading logs...</p>
+                  ) : debugLogs.length === 0 ? (
+                    <p className="text-muted-foreground">No debug logs yet. Try liking a bar to generate logs.</p>
+                  ) : (
+                    <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                      {debugLogs.map((log: any) => {
+                        let details;
+                        try {
+                          details = JSON.parse(log.details);
+                        } catch {
+                          details = { raw: log.details };
+                        }
+                        return (
+                          <div
+                            key={log.id}
+                            className={`border rounded-lg p-3 space-y-2 ${
+                              log.success ? 'border-border' : 'border-red-500 bg-red-500/10'
+                            }`}
+                            data-testid={`log-entry-${log.id}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant={log.success ? "default" : "destructive"}>
+                                  {log.action.toUpperCase()}
+                                </Badge>
+                                {log.success ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-red-500" />
+                                )}
+                                <span className="text-sm text-muted-foreground">
+                                  @{details.username || 'unknown'}
+                                </span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(log.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            
+                            <div className="text-sm space-y-1">
+                              <p><span className="text-muted-foreground">User ID:</span> {log.userId}</p>
+                              <p><span className="text-muted-foreground">Bar ID:</span> {log.targetId}</p>
+                              {details.liked !== undefined && (
+                                <p><span className="text-muted-foreground">Action:</span> {details.liked ? 'Liked' : 'Unliked'}</p>
+                              )}
+                              {details.disliked !== undefined && (
+                                <p><span className="text-muted-foreground">Action:</span> {details.disliked ? 'Disliked' : 'Undisliked'}</p>
+                              )}
+                              {details.newLikeCount !== undefined && (
+                                <p><span className="text-muted-foreground">New Like Count:</span> {details.newLikeCount}</p>
+                              )}
+                              {details.newDislikeCount !== undefined && (
+                                <p><span className="text-muted-foreground">New Dislike Count:</span> {details.newDislikeCount}</p>
+                              )}
+                              {details.duration && (
+                                <p><span className="text-muted-foreground">Duration:</span> {details.duration}ms</p>
+                              )}
+                              {details.barExists !== undefined && (
+                                <p><span className="text-muted-foreground">Bar Exists:</span> {details.barExists ? 'Yes' : 'No'}</p>
+                              )}
+                              {details.notificationSent && (
+                                <p><span className="text-muted-foreground">Notification Sent:</span> Yes</p>
+                              )}
+                            </div>
+                            
+                            {log.errorMessage && (
+                              <div className="mt-2 p-2 bg-red-500/20 rounded text-sm text-red-300">
+                                <strong>Error:</strong> {log.errorMessage}
+                              </div>
+                            )}
+                            
+                            {details.stack && (
+                              <details className="mt-2">
+                                <summary className="text-xs text-muted-foreground cursor-pointer">Stack trace</summary>
+                                <pre className="mt-1 text-xs bg-black/30 p-2 rounded overflow-x-auto whitespace-pre-wrap">
+                                  {details.stack}
+                                </pre>
+                              </details>
+                            )}
+                            
+                            <details className="mt-2">
+                              <summary className="text-xs text-muted-foreground cursor-pointer">Full details (JSON)</summary>
+                              <pre className="mt-1 text-xs bg-black/30 p-2 rounded overflow-x-auto whitespace-pre-wrap">
+                                {JSON.stringify(details, null, 2)}
+                              </pre>
+                            </details>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

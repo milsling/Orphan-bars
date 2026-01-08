@@ -363,6 +363,21 @@ export const customAchievementsRelations = relations(customAchievements, ({ one 
 export type CustomAchievement = typeof customAchievements.$inferSelect;
 export type InsertCustomAchievement = typeof customAchievements.$inferInsert;
 
+// Debug logs for admin troubleshooting
+export const debugLogs = pgTable("debug_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  action: text("action").notNull(), // like, dislike, follow, etc.
+  userId: varchar("user_id"),
+  targetId: varchar("target_id"), // barId, userId, etc.
+  details: text("details").notNull(), // JSON string with full details
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type DebugLog = typeof debugLogs.$inferSelect;
+export type InsertDebugLog = typeof debugLogs.$inferInsert;
+
 export const ACHIEVEMENTS = {
   first_bar: { name: "Origin Founder", emoji: "🔥", description: "Posted your first bar", threshold: { barsMinted: 1 }, rarity: "common" as AchievementRarity },
   bar_slinger: { name: "Bar Slinger", emoji: "💀", description: "Posted 10 bars", threshold: { barsMinted: 10 }, rarity: "rare" as AchievementRarity },

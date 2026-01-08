@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, debugLogs, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement, type DebugLog, type InsertDebugLog } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql, or, ilike, notInArray, ne } from "drizzle-orm";
 import { createHash } from "crypto";
@@ -175,6 +175,11 @@ export interface IStorage {
   updateCustomAchievement(id: string, updates: Partial<CustomAchievement>): Promise<CustomAchievement | undefined>;
   deleteCustomAchievement(id: string): Promise<boolean>;
   checkCustomAchievements(userId: string): Promise<string[]>;
+  
+  // Debug log methods (admin only)
+  createDebugLog(data: Omit<InsertDebugLog, 'id' | 'createdAt'>): Promise<DebugLog>;
+  getDebugLogs(limit?: number, action?: string): Promise<DebugLog[]>;
+  clearDebugLogs(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1721,6 +1726,32 @@ export class DatabaseStorage implements IStorage {
     }
 
     return unlockedIds;
+  }
+
+  // Debug log methods
+  async createDebugLog(data: Omit<InsertDebugLog, 'id' | 'createdAt'>): Promise<DebugLog> {
+    const [log] = await db.insert(debugLogs).values(data).returning();
+    return log;
+  }
+
+  async getDebugLogs(limit: number = 100, action?: string): Promise<DebugLog[]> {
+    if (action) {
+      return db
+        .select()
+        .from(debugLogs)
+        .where(eq(debugLogs.action, action))
+        .orderBy(desc(debugLogs.createdAt))
+        .limit(limit);
+    }
+    return db
+      .select()
+      .from(debugLogs)
+      .orderBy(desc(debugLogs.createdAt))
+      .limit(limit);
+  }
+
+  async clearDebugLogs(): Promise<void> {
+    await db.delete(debugLogs);
   }
 }
 
