@@ -1086,6 +1086,16 @@ export async function registerRoutes(
     }
   });
 
+  // Get active custom achievements (public endpoint)
+  app.get("/api/achievements/custom", async (_req, res) => {
+    try {
+      const customAchievements = await storage.getActiveCustomAchievements();
+      res.json(customAchievements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Update displayed badges
   app.patch("/api/user/displayed-badges", isAuthenticated, async (req, res) => {
     try {
@@ -1096,9 +1106,11 @@ export async function registerRoutes(
       if (displayedBadges.length > 5) {
         return res.status(400).json({ message: "Maximum 5 badges can be displayed" });
       }
-      // Verify all badges are valid achievement IDs
+      // Verify all badges are valid achievement IDs (built-in or custom)
+      const customAchievements = await storage.getActiveCustomAchievements();
+      const validCustomIds = new Set(customAchievements.map(a => `custom_${a.id}`));
       for (const badgeId of displayedBadges) {
-        if (!ACHIEVEMENTS[badgeId as keyof typeof ACHIEVEMENTS]) {
+        if (!ACHIEVEMENTS[badgeId as keyof typeof ACHIEVEMENTS] && !validCustomIds.has(badgeId)) {
           return res.status(400).json({ message: `Invalid badge ID: ${badgeId}` });
         }
       }

@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban, Flag, AlertTriangle, Eye, Wrench, Archive, RotateCcw } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban, Flag, AlertTriangle, Eye, Wrench, Archive, RotateCcw, Trophy, Plus, Pencil, Power } from "lucide-react";
 import { useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
 import { useToast } from "@/hooks/use-toast";
@@ -300,6 +300,113 @@ export default function Admin() {
     },
   });
 
+  // Custom achievement state and queries (owner only)
+  const [newAchievementName, setNewAchievementName] = useState("");
+  const [newAchievementEmoji, setNewAchievementEmoji] = useState("");
+  const [newAchievementDescription, setNewAchievementDescription] = useState("");
+  const [newAchievementRarity, setNewAchievementRarity] = useState("common");
+  const [newAchievementCondition, setNewAchievementCondition] = useState("bars_posted");
+  const [newAchievementThreshold, setNewAchievementThreshold] = useState(1);
+  const [editingAchievement, setEditingAchievement] = useState<any>(null);
+
+  const { data: customAchievements = [], isLoading: isLoadingAchievements } = useQuery<any[]>({
+    queryKey: ['admin', 'achievements', 'custom'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/achievements/custom', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch custom achievements');
+      return res.json();
+    },
+    enabled: !!currentUser?.isOwner,
+  });
+
+  const createAchievementMutation = useMutation({
+    mutationFn: async (data: { name: string; emoji: string; description: string; rarity: string; conditionType: string; threshold: number }) => {
+      const res = await fetch('/api/admin/achievements/custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to create achievement');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'achievements', 'custom'] });
+      setNewAchievementName("");
+      setNewAchievementEmoji("");
+      setNewAchievementDescription("");
+      setNewAchievementRarity("common");
+      setNewAchievementCondition("bars_posted");
+      setNewAchievementThreshold(1);
+      toast({ title: "Achievement created" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateAchievementMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; [key: string]: any }) => {
+      const res = await fetch(`/api/admin/achievements/custom/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update achievement');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'achievements', 'custom'] });
+      setEditingAchievement(null);
+      toast({ title: "Achievement updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteAchievementMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/admin/achievements/custom/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete achievement');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'achievements', 'custom'] });
+      toast({ title: "Achievement deleted" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const conditionOptions = [
+    { value: "bars_posted", label: "Bars Posted", description: "Post X number of bars" },
+    { value: "likes_received", label: "Total Likes Received", description: "Receive X total likes across all bars" },
+    { value: "followers_count", label: "Followers Count", description: "Gain X followers" },
+    { value: "following_count", label: "Following Count", description: "Follow X people" },
+    { value: "single_bar_likes", label: "Single Bar Likes", description: "Get X likes on a single bar" },
+    { value: "single_bar_comments", label: "Single Bar Comments", description: "Get X comments on a single bar" },
+    { value: "single_bar_bookmarks", label: "Single Bar Bookmarks", description: "Get X bookmarks on a single bar" },
+    { value: "comments_made", label: "Comments Made", description: "Make X comments on bars" },
+    { value: "bars_adopted", label: "Bars Adopted", description: "Adopt X bars from the Orphanage" },
+    { value: "controversial_bar", label: "Controversial Bar", description: "Have a bar with more dislikes than likes (threshold = min total reactions)" },
+    { value: "night_owl", label: "Night Owl", description: "Post a bar between midnight and 5am (threshold ignored)" },
+    { value: "early_bird", label: "Early Bird", description: "Post a bar between 5am and 8am (threshold ignored)" },
+  ];
+
+  const rarityColors: Record<string, string> = {
+    common: "text-gray-400",
+    uncommon: "text-green-400",
+    rare: "text-blue-400",
+    epic: "text-purple-400",
+    legendary: "text-yellow-400",
+  };
+
   const { data: deletedBars = [], isLoading: isLoadingArchive } = useQuery<any[]>({
     queryKey: ['admin', 'archive'],
     queryFn: async () => {
@@ -392,7 +499,7 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="moderation" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsList className={`grid w-full mb-6 ${currentUser?.isOwner ? 'grid-cols-8' : 'grid-cols-7'}`}>
             <TabsTrigger value="moderation" className="gap-1 text-xs px-2">
               <Eye className="h-4 w-4" />
               <span className="hidden sm:inline">Review</span>
@@ -441,6 +548,12 @@ export default function Admin() {
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Bars</span>
             </TabsTrigger>
+            {currentUser?.isOwner && (
+              <TabsTrigger value="achievements" className="gap-1 text-xs px-2">
+                <Trophy className="h-4 w-4" />
+                <span className="hidden sm:inline">Badges</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="moderation">
@@ -1039,6 +1152,201 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {currentUser?.isOwner && (
+            <TabsContent value="achievements">
+              <Card className="border-border bg-card/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    Custom Achievements (Owner Only)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="border border-border rounded-lg p-4 space-y-4">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Create New Achievement
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="achievement-name">Name</Label>
+                        <Input
+                          id="achievement-name"
+                          placeholder="e.g., Comment King"
+                          value={newAchievementName}
+                          onChange={(e) => setNewAchievementName(e.target.value)}
+                          data-testid="input-achievement-name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="achievement-emoji">Emoji</Label>
+                        <Input
+                          id="achievement-emoji"
+                          placeholder="e.g., 👑"
+                          value={newAchievementEmoji}
+                          onChange={(e) => setNewAchievementEmoji(e.target.value)}
+                          maxLength={4}
+                          data-testid="input-achievement-emoji"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="achievement-description">Description</Label>
+                      <Textarea
+                        id="achievement-description"
+                        placeholder="e.g., Make 100 comments on bars"
+                        value={newAchievementDescription}
+                        onChange={(e) => setNewAchievementDescription(e.target.value)}
+                        data-testid="input-achievement-description"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="achievement-condition">Condition</Label>
+                        <Select value={newAchievementCondition} onValueChange={setNewAchievementCondition}>
+                          <SelectTrigger id="achievement-condition" data-testid="select-achievement-condition">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {conditionOptions.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {conditionOptions.find(o => o.value === newAchievementCondition)?.description}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="achievement-threshold">Threshold</Label>
+                        <Input
+                          id="achievement-threshold"
+                          type="number"
+                          min={1}
+                          value={newAchievementThreshold}
+                          onChange={(e) => setNewAchievementThreshold(parseInt(e.target.value) || 1)}
+                          data-testid="input-achievement-threshold"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="achievement-rarity">Rarity</Label>
+                        <Select value={newAchievementRarity} onValueChange={setNewAchievementRarity}>
+                          <SelectTrigger id="achievement-rarity" data-testid="select-achievement-rarity">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="common">Common</SelectItem>
+                            <SelectItem value="uncommon">Uncommon</SelectItem>
+                            <SelectItem value="rare">Rare</SelectItem>
+                            <SelectItem value="epic">Epic</SelectItem>
+                            <SelectItem value="legendary">Legendary</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => createAchievementMutation.mutate({
+                        name: newAchievementName,
+                        emoji: newAchievementEmoji,
+                        description: newAchievementDescription,
+                        rarity: newAchievementRarity,
+                        conditionType: newAchievementCondition,
+                        threshold: newAchievementThreshold,
+                      })}
+                      disabled={!newAchievementName.trim() || !newAchievementEmoji.trim() || !newAchievementDescription.trim() || createAchievementMutation.isPending}
+                      className="w-full"
+                      data-testid="button-create-achievement"
+                    >
+                      {createAchievementMutation.isPending ? "Creating..." : "Create Achievement"}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="font-semibold">Existing Custom Achievements ({customAchievements.length})</h3>
+                    {isLoadingAchievements ? (
+                      <p className="text-muted-foreground">Loading...</p>
+                    ) : customAchievements.length === 0 ? (
+                      <p className="text-muted-foreground">No custom achievements created yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {customAchievements.map((achievement: any) => (
+                          <div
+                            key={achievement.id}
+                            className="flex items-center justify-between border border-border rounded-lg p-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{achievement.emoji}</span>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{achievement.name}</span>
+                                  <Badge variant="outline" className={rarityColors[achievement.rarity] || "text-gray-400"}>
+                                    {achievement.rarity}
+                                  </Badge>
+                                  {!achievement.isActive && (
+                                    <Badge variant="secondary">Disabled</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {conditionOptions.find(o => o.value === achievement.conditionType)?.label} ({achievement.threshold})
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => updateAchievementMutation.mutate({ 
+                                  id: achievement.id, 
+                                  isActive: !achievement.isActive 
+                                })}
+                                className={achievement.isActive ? "text-green-500" : "text-gray-500"}
+                                data-testid={`button-toggle-achievement-${achievement.id}`}
+                              >
+                                <Power className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-destructive hover:bg-destructive/10"
+                                    data-testid={`button-delete-achievement-${achievement.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Achievement</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{achievement.name}"? Users who have earned this badge will keep it, but no new users can earn it.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteAchievementMutation.mutate(achievement.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
 
         <Dialog open={!!moderateBarId} onOpenChange={(open) => !open && setModerateBarId(null)}>

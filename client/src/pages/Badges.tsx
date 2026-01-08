@@ -12,11 +12,17 @@ import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-const rarityConfig: Record<AchievementRarity, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
+const rarityConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
   common: { 
     label: "Common", 
     color: "text-gray-400", 
     bgColor: "bg-gray-500/20",
+    icon: <Star className="w-3 h-3" />
+  },
+  uncommon: { 
+    label: "Uncommon", 
+    color: "text-green-400", 
+    bgColor: "bg-green-500/20",
     icon: <Star className="w-3 h-3" />
   },
   rare: { 
@@ -60,6 +66,15 @@ export default function Badges() {
       return api.getUser(currentUser.username);
     },
     enabled: !!currentUser?.username,
+  });
+
+  const { data: customAchievements = [] } = useQuery({
+    queryKey: ["customAchievements"],
+    queryFn: async () => {
+      const res = await fetch("/api/achievements/custom", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
   });
 
   const updateDisplayedBadgesMutation = useMutation({
@@ -152,7 +167,21 @@ export default function Badges() {
             <span className="text-sm text-muted-foreground italic">No badges selected</span>
           ) : (
             Array.from(displayedBadges).map((badgeId) => {
-              const achievement = ACHIEVEMENTS[badgeId as AchievementId];
+              let achievement: { name: string; emoji: string; description: string; rarity: string } | null = null;
+              
+              if (badgeId.startsWith("custom_")) {
+                const customId = badgeId.replace("custom_", "");
+                const custom = customAchievements.find((c: any) => c.id === customId);
+                if (custom) {
+                  achievement = { name: custom.name, emoji: custom.emoji, description: custom.description, rarity: custom.rarity };
+                }
+              } else {
+                const builtin = ACHIEVEMENTS[badgeId as AchievementId];
+                if (builtin) {
+                  achievement = builtin;
+                }
+              }
+              
               if (!achievement) return null;
               const rarity = achievement.rarity;
               return (
@@ -163,7 +192,7 @@ export default function Badges() {
                         className={cn(
                           "inline-flex items-center justify-center w-8 h-8 rounded-full text-lg",
                           `badge-${rarity}`,
-                          rarityConfig[rarity].bgColor
+                          rarityConfig[rarity]?.bgColor || "bg-gray-500/20"
                         )}
                       >
                         {achievement.emoji}
@@ -254,6 +283,80 @@ export default function Badges() {
             </div>
           );
         })}
+
+        {customAchievements.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex items-center gap-1.5 text-cyan-400">
+                <Sparkles className="w-4 h-4" />
+                <span className="font-semibold text-lg">Special Badges</span>
+              </span>
+              <Badge variant="outline" className="text-cyan-400">
+                {customAchievements.filter((a: any) => unlockedIds.has(`custom_${a.id}`)).length}/{customAchievements.length}
+              </Badge>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {customAchievements.map((achievement: any) => {
+                const customId = `custom_${achievement.id}`;
+                const isUnlocked = unlockedIds.has(customId);
+                const isDisplayed = displayedBadges.has(customId);
+                const config = rarityConfig[achievement.rarity] || rarityConfig.common;
+
+                return (
+                  <Card 
+                    key={customId}
+                    className={cn(
+                      "transition-all border-cyan-500/30",
+                      !isUnlocked && "opacity-50 grayscale",
+                      isDisplayed && `badge-${achievement.rarity}`
+                    )}
+                    data-testid={`badge-card-${customId}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div 
+                          className={cn(
+                            "flex items-center justify-center w-12 h-12 rounded-full text-2xl shrink-0",
+                            isUnlocked ? config.bgColor : "bg-muted",
+                            isUnlocked && isDisplayed && `badge-${achievement.rarity}`
+                          )}
+                        >
+                          {isUnlocked ? achievement.emoji : <Lock className="w-5 h-5 text-muted-foreground" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold truncate">{achievement.name}</h3>
+                              <Badge variant="outline" className={config.color}>
+                                {achievement.rarity}
+                              </Badge>
+                            </div>
+                            {isUnlocked && (
+                              <Switch
+                                checked={isDisplayed}
+                                onCheckedChange={() => toggleBadgeDisplay(customId)}
+                                disabled={updateDisplayedBadgesMutation.isPending}
+                                data-testid={`switch-badge-${customId}`}
+                              />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                          {isUnlocked && (
+                            <div className="flex items-center gap-1 mt-1 text-xs text-green-500">
+                              <Check className="w-3 h-3" />
+                              Unlocked
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
