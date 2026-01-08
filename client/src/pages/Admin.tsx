@@ -308,6 +308,74 @@ export default function Admin() {
   const [newAchievementCondition, setNewAchievementCondition] = useState("bars_posted");
   const [newAchievementThreshold, setNewAchievementThreshold] = useState(1);
   const [editingAchievement, setEditingAchievement] = useState<any>(null);
+  
+  // Advanced achievement builder state
+  const [useAdvancedMode, setUseAdvancedMode] = useState(false);
+  const [ruleOperator, setRuleOperator] = useState<"AND" | "OR">("AND");
+  type RuleCondition = { id: string; metric: string; comparator: string; value: number; keyword?: string };
+  const [ruleConditions, setRuleConditions] = useState<RuleCondition[]>([
+    { id: "1", metric: "bars_posted", comparator: ">=", value: 1 }
+  ]);
+  
+  const addRuleCondition = () => {
+    setRuleConditions([...ruleConditions, { 
+      id: Date.now().toString(), 
+      metric: "bars_posted", 
+      comparator: ">=", 
+      value: 1 
+    }]);
+  };
+  
+  const removeRuleCondition = (id: string) => {
+    if (ruleConditions.length > 1) {
+      setRuleConditions(ruleConditions.filter(c => c.id !== id));
+    }
+  };
+  
+  const updateRuleCondition = (id: string, updates: Partial<RuleCondition>) => {
+    setRuleConditions(ruleConditions.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+  
+  const buildRuleTree = () => {
+    if (ruleConditions.length === 1) {
+      const c = ruleConditions[0];
+      return {
+        type: "condition" as const,
+        metric: c.metric,
+        comparator: c.comparator,
+        value: c.value,
+        ...(c.metric === "bars_with_keyword" && c.keyword ? { keyword: c.keyword } : {})
+      };
+    }
+    return {
+      type: "group" as const,
+      operator: ruleOperator,
+      children: ruleConditions.map(c => ({
+        type: "condition" as const,
+        metric: c.metric,
+        comparator: c.comparator,
+        value: c.value,
+        ...(c.metric === "bars_with_keyword" && c.keyword ? { keyword: c.keyword } : {})
+      }))
+    };
+  };
+  
+  const generateRulePreview = () => {
+    const parts = ruleConditions.map(c => {
+      const opt = conditionOptions.find(o => o.value === c.metric);
+      const label = opt?.label || c.metric;
+      if (c.metric === "bars_with_keyword" && c.keyword) {
+        return `${label} "${c.keyword}" ${c.comparator} ${c.value}`;
+      }
+      return `${label} ${c.comparator} ${c.value}`;
+    });
+    return parts.join(` ${ruleOperator} `);
+  };
+  
+  const resetAdvancedMode = () => {
+    setRuleConditions([{ id: "1", metric: "bars_posted", comparator: ">=", value: 1 }]);
+    setRuleOperator("AND");
+  };
 
   const { data: customAchievements = [], isLoading: isLoadingAchievements } = useQuery<any[]>({
     queryKey: ['admin', 'achievements', 'custom'],
@@ -369,7 +437,7 @@ export default function Admin() {
   });
 
   const createAchievementMutation = useMutation({
-    mutationFn: async (data: { name: string; emoji: string; description: string; rarity: string; conditionType: string; threshold: number }) => {
+    mutationFn: async (data: { name: string; emoji: string; description: string; rarity: string; conditionType: string; threshold: number; ruleTree?: any }) => {
       const res = await fetch('/api/admin/achievements/custom', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -388,6 +456,8 @@ export default function Admin() {
       setNewAchievementRarity("common");
       setNewAchievementCondition("bars_posted");
       setNewAchievementThreshold(1);
+      setUseAdvancedMode(false);
+      resetAdvancedMode();
       toast({ title: data.message || (currentUser?.isOwner ? "Achievement created" : "Submitted for approval") });
     },
     onError: (error: any) => {
@@ -479,6 +549,7 @@ export default function Admin() {
     { value: "controversial_bar", label: "Controversial Bar", description: "Have a bar with more dislikes than likes (threshold = min total reactions)" },
     { value: "night_owl", label: "Night Owl", description: "Post a bar between midnight and 5am (threshold ignored)" },
     { value: "early_bird", label: "Early Bird", description: "Post a bar between 5am and 8am (threshold ignored)" },
+    { value: "bars_with_keyword", label: "Bars with Keyword", description: "Post X bars containing a specific word" },
   ];
 
   const rarityColors: Record<string, string> = {
