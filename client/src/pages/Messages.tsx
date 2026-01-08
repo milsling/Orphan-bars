@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useLocation, useParams } from "wouter";
-import { MessageCircle, Send, ArrowLeft, Users, Wifi, WifiOff } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Users, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useBars } from "@/context/BarContext";
 import { formatTimestamp } from "@/lib/formatDate";
@@ -35,7 +35,7 @@ export default function Messages() {
     }
   }, [queryClient, selectedUserId]);
 
-  const { isConnected } = useWebSocket({
+  const { isConnected, connectionHealth, forceReconnect } = useWebSocket({
     onMessage: handleNewMessage,
   });
 
@@ -71,9 +71,9 @@ export default function Messages() {
       return res.json();
     },
     enabled: !!selectedUserId,
-    refetchInterval: isConnected ? false : (selectedUserId ? 10000 : false),
-    staleTime: 5000,
-    refetchOnWindowFocus: false,
+    refetchInterval: selectedUserId ? (connectionHealth === 'healthy' ? 30000 : 5000) : false,
+    staleTime: 3000,
+    refetchOnWindowFocus: true,
   });
 
   const conversationUser = selectedUserId
@@ -336,13 +336,24 @@ export default function Messages() {
                 <MessageCircle className="h-5 w-5 text-primary" />
                 <h1 className="font-display font-bold text-lg">Messages</h1>
               </div>
-              <div className="flex items-center gap-1" title={isConnected ? "Real-time connected" : "Polling for updates"}>
-                {isConnected ? (
+              <button
+                onClick={() => !isConnected && forceReconnect()}
+                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                title={
+                  connectionHealth === 'healthy' ? "Real-time connected" :
+                  connectionHealth === 'degraded' ? "Checking connection..." :
+                  "Disconnected - click to reconnect"
+                }
+                data-testid="button-connection-status"
+              >
+                {connectionHealth === 'healthy' ? (
                   <Wifi className="h-3.5 w-3.5 text-green-500" />
+                ) : connectionHealth === 'degraded' ? (
+                  <RefreshCw className="h-3.5 w-3.5 text-yellow-500 animate-spin" />
                 ) : (
                   <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
                 )}
-              </div>
+              </button>
             </div>
             <ConversationList />
           </div>
@@ -381,13 +392,19 @@ export default function Messages() {
                 <>
                   <MessageCircle className="h-5 w-5 text-primary" />
                   <h1 className="font-display font-bold">Messages</h1>
-                  <div className="ml-auto flex items-center gap-1" title={isConnected ? "Connected" : "Polling"}>
-                    {isConnected ? (
+                  <button
+                    onClick={() => !isConnected && forceReconnect()}
+                    className="ml-auto flex items-center gap-1"
+                    title={connectionHealth === 'healthy' ? "Connected" : "Click to reconnect"}
+                  >
+                    {connectionHealth === 'healthy' ? (
                       <Wifi className="h-3.5 w-3.5 text-green-500" />
+                    ) : connectionHealth === 'degraded' ? (
+                      <RefreshCw className="h-3.5 w-3.5 text-yellow-500 animate-spin" />
                     ) : (
                       <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
-                  </div>
+                  </button>
                 </>
               )}
             </div>
