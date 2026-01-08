@@ -903,6 +903,7 @@ export async function registerRoutes(
     };
     
     try {
+      console.log(`[ROUTE] User ${req.user!.id} attempting to dislike bar ${req.params.id}`);
       const disliked = await storage.toggleDislike(req.user!.id, req.params.id);
       const count = await storage.getDislikeCount(req.params.id);
       const likeCount = await storage.getLikeCount(req.params.id);
@@ -913,6 +914,8 @@ export async function registerRoutes(
       logDetails.likeCount = likeCount;
       logDetails.duration = Date.now() - startTime;
       
+      console.log(`[ROUTE] Dislike toggle success: disliked=${disliked}, newCount=${count}`);
+
       // Send notification if disliked (not undisliked) and not own bar
       if (disliked) {
         const bar = await storage.getBarById(req.params.id);
@@ -943,6 +946,7 @@ export async function registerRoutes(
       logDetails.stack = error.stack;
       logDetails.duration = Date.now() - startTime;
       
+      console.error(`[ROUTE] Dislike toggle error: ${error.message}`);
       await storage.createDebugLog({
         action: "dislike",
         userId: req.user!.id,

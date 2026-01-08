@@ -495,11 +495,13 @@ export class DatabaseStorage implements IStorage {
     const [existing] = await db.select().from(dislikes).where(and(eq(dislikes.userId, userId), eq(dislikes.barId, barId)));
     if (existing) {
       await db.delete(dislikes).where(eq(dislikes.id, existing.id));
+      console.log(`[STORAGE] User ${userId} undisliked bar ${barId}`);
       return false;
     } else {
       // Remove like if exists (mutual exclusivity)
       await db.delete(likes).where(and(eq(likes.userId, userId), eq(likes.barId, barId)));
       await db.insert(dislikes).values({ userId, barId });
+      console.log(`[STORAGE] User ${userId} disliked bar ${barId}`);
       return true;
     }
   }

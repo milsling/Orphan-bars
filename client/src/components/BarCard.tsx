@@ -326,18 +326,35 @@ export default function BarCard({ bar }: BarCardProps) {
 
   const dislikeMutation = useMutation({
     mutationFn: () => api.toggleDislike(bar.id),
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['dislikes', bar.id] });
+      const previousDislikes = queryClient.getQueryData<{ count: number; disliked: boolean }>(['dislikes', bar.id]);
+      const newDisliked = !previousDislikes?.disliked;
+      const newCount = (previousDislikes?.count || 0) + (newDisliked ? 1 : -1);
+      queryClient.setQueryData(['dislikes', bar.id], { count: Math.max(0, newCount), disliked: newDisliked });
+      if (newDisliked) {
+        const previousLikes = queryClient.getQueryData<{ count: number; liked: boolean }>(['likes', bar.id]);
+        if (previousLikes?.liked) {
+          queryClient.setQueryData(['likes', bar.id], { count: Math.max(0, previousLikes.count - 1), liked: false });
+        }
+      }
+      return { previousDislikes };
+    },
+    onError: (error: any, _, context) => {
+      if (context?.previousDislikes) {
+        queryClient.setQueryData(['dislikes', bar.id], context.previousDislikes);
+      }
+      if (error.message.includes("Not authenticated")) {
+        toast({ title: "Login required", description: "You need to be logged in to dislike posts", variant: "destructive" });
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['dislikes', bar.id] });
       queryClient.invalidateQueries({ queryKey: ['likes', bar.id] });
       queryClient.invalidateQueries({ queryKey: ['bars'] });
       queryClient.invalidateQueries({ queryKey: ['bars-featured'] });
       queryClient.invalidateQueries({ queryKey: ['bars-top'] });
       queryClient.invalidateQueries({ queryKey: ['bars-trending'] });
-    },
-    onError: (error: any) => {
-      if (error.message.includes("Not authenticated")) {
-        toast({ title: "Login required", description: "You need to be logged in to dislike posts", variant: "destructive" });
-      }
     },
   });
 
