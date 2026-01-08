@@ -1875,6 +1875,93 @@ export async function registerRoutes(
     }
   });
 
+  // Custom achievement routes (owner only)
+  const isOwner: typeof isAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated() && req.user?.isOwner) {
+      return next();
+    }
+    return res.status(403).json({ message: "Owner access required" });
+  };
+
+  app.get("/api/admin/achievements/custom", isOwner, async (req, res) => {
+    try {
+      const achievements = await storage.getCustomAchievements();
+      res.json(achievements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/achievements/custom", isOwner, async (req, res) => {
+    try {
+      const { name, emoji, description, rarity, conditionType, threshold } = req.body;
+      
+      if (!name || !emoji || !description || !conditionType) {
+        return res.status(400).json({ message: "Name, emoji, description, and condition type are required" });
+      }
+
+      const validConditions = [
+        "bars_posted", "likes_received", "followers_count", "following_count",
+        "single_bar_likes", "single_bar_comments", "single_bar_bookmarks",
+        "comments_made", "bars_adopted", "controversial_bar", "night_owl", "early_bird"
+      ];
+      if (!validConditions.includes(conditionType)) {
+        return res.status(400).json({ message: "Invalid condition type" });
+      }
+
+      const validRarities = ["common", "uncommon", "rare", "epic", "legendary"];
+      if (rarity && !validRarities.includes(rarity)) {
+        return res.status(400).json({ message: "Invalid rarity" });
+      }
+
+      const achievement = await storage.createCustomAchievement({
+        name: name.trim(),
+        emoji: emoji.trim(),
+        description: description.trim(),
+        rarity: rarity || "common",
+        conditionType,
+        threshold: threshold || 1,
+        createdBy: req.user!.id,
+      });
+
+      res.json(achievement);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/achievements/custom/:id", isOwner, async (req, res) => {
+    try {
+      const { name, emoji, description, rarity, conditionType, threshold, isActive } = req.body;
+      const updates: any = {};
+
+      if (name !== undefined) updates.name = name.trim();
+      if (emoji !== undefined) updates.emoji = emoji.trim();
+      if (description !== undefined) updates.description = description.trim();
+      if (rarity !== undefined) updates.rarity = rarity;
+      if (conditionType !== undefined) updates.conditionType = conditionType;
+      if (threshold !== undefined) updates.threshold = threshold;
+      if (isActive !== undefined) updates.isActive = isActive;
+
+      const achievement = await storage.updateCustomAchievement(req.params.id, updates);
+      if (!achievement) {
+        return res.status(404).json({ message: "Achievement not found" });
+      }
+      res.json(achievement);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/achievements/custom/:id", isOwner, async (req, res) => {
+    try {
+      await storage.deleteCustomAchievement(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin archive routes (soft-deleted bars)
   app.get("/api/admin/archive", isAdmin, async (req, res) => {
     try {

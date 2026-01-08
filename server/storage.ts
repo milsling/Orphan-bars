@@ -1327,6 +1327,10 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
+    // Also check custom achievements
+    const customUnlocked = await this.checkCustomAchievements(userId);
+    newlyUnlocked.push(...(customUnlocked as AchievementId[]));
+    
     return newlyUnlocked;
   }
 
