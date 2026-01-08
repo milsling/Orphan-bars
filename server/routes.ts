@@ -2401,5 +2401,180 @@ export async function registerRoutes(
     }
   });
 
+  // Owner Console Routes
+  app.post("/api/owner/console/query", isOwner, async (req, res) => {
+    try {
+      const { query } = req.body;
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Query is required" });
+      }
+
+      const normalizedQuery = query.trim().toLowerCase();
+      
+      // Only allow SELECT queries for safety
+      if (!normalizedQuery.startsWith('select')) {
+        return res.status(400).json({ 
+          message: "Only SELECT queries are allowed. Use specific action endpoints for modifications." 
+        });
+      }
+
+      // Block multiple statements (semicolon followed by anything except whitespace/end)
+      const semicolonCheck = query.replace(/;\s*$/, ''); // Remove trailing semicolon
+      if (semicolonCheck.includes(';')) {
+        return res.status(400).json({ 
+          message: "Multiple statements are not allowed" 
+        });
+      }
+
+      // Block dangerous keywords anywhere in the query (case insensitive)
+      const dangerousKeywords = [
+        'drop', 'delete', 'truncate', 'update', 'insert', 'alter', 'create',
+        'grant', 'revoke', 'execute', 'exec', 'pg_sleep', 'copy', 'load_file',
+        'into', 'benchmark', 'information_schema', 'pg_catalog', 'pg_proc', 
+        'current_setting', 'set_config', 'vacuum', 'analyze', 'reindex'
+      ];
+      
+      for (const keyword of dangerousKeywords) {
+        // Match keyword as whole word (not part of column name)
+        const wordBoundaryRegex = new RegExp(`\\b${keyword}\\b`, 'i');
+        if (wordBoundaryRegex.test(query)) {
+          return res.status(400).json({ 
+            message: `Query contains forbidden keyword: ${keyword}` 
+          });
+        }
+      }
+
+      // Block SQL comments
+      if (query.includes('--') || query.includes('/*') || query.includes('*/')) {
+        return res.status(400).json({ 
+          message: "SQL comments are not allowed" 
+        });
+      }
+
+      // Add LIMIT if not present
+      let safeQuery = query.replace(/;\s*$/, '').trim(); // Remove trailing semicolon
+      if (!normalizedQuery.includes('limit')) {
+        safeQuery = safeQuery + ' LIMIT 100';
+      }
+
+      // Log the query
+      await storage.createDebugLog({
+        action: 'owner_console_query',
+        userId: req.user!.id,
+        details: JSON.stringify({ query: safeQuery }),
+      });
+
+      const result = await db.execute(safeQuery as any);
+      res.json({ 
+        success: true, 
+        rows: result.rows || result,
+        rowCount: result.rowCount || (result.rows?.length ?? 0)
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/owner/console/action", isOwner, async (req, res) => {
+    try {
+      const { action, params } = req.body;
+      
+      // Log the action
+      await storage.createDebugLog({
+        action: 'owner_console_action',
+        userId: req.user!.id,
+        details: JSON.stringify({ action, params }),
+      });
+
+      let result: any;
+      
+      switch (action) {
+        case 'clear_debug_logs':
+          await storage.clearDebugLogs();
+          result = { message: "Debug logs cleared" };
+          break;
+          
+        case 'get_user_by_username':
+          if (!params?.username) {
+            return res.status(400).json({ message: "Username required" });
+          }
+          const user = await storage.getUserByUsername(params.username);
+          if (!user) {
+            return res.status(404).json({ message: "User not found" });
+          }
+          const { password: _, ...safeUser } = user;
+          result = safeUser;
+          break;
+          
+        
+        case 'promote_admin':
+          if (!params?.userId) {
+            return res.status(400).json({ message: "User ID required" });
+          }
+          await storage.updateUser(params.userId, { isAdmin: true });
+          result = { message: "User promoted to admin" };
+          break;
+          
+        case 'demote_admin':
+          if (!params?.userId) {
+            return res.status(400).json({ message: "User ID required" });
+          }
+          await storage.updateUser(params.userId, { isAdmin: false, isAdminPlus: false });
+          result = { message: "User demoted from admin" };
+          break;
+          
+        case 'delete_user':
+          if (!params?.userId) {
+            return res.status(400).json({ message: "User ID required" });
+          }
+          if (params.userId === req.user!.id) {
+            return res.status(400).json({ message: "Cannot delete yourself" });
+          }
+          await storage.deleteUser(params.userId);
+          result = { message: "User deleted" };
+          break;
+
+        case 'reset_user_password':
+          if (!params?.userId || !params?.newPassword) {
+            return res.status(400).json({ message: "User ID and new password required" });
+          }
+          const hashed = await hashPassword(params.newPassword);
+          await storage.updateUser(params.userId, { password: hashed });
+          result = { message: "Password reset" };
+          break;
+          
+        default:
+          return res.status(400).json({ message: "Unknown action: " + action });
+      }
+
+      res.json({ success: true, result });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/owner/console/stats", isOwner, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const totalUsers = allUsers.length;
+      const bannedUsers = 0; // Ban feature not yet implemented
+      const admins = allUsers.filter(u => u.isAdmin || u.isAdminPlus).length;
+      const onlineNow = allUsers.filter(u => u.onlineStatus === 'online').length;
+      
+      // Get bar count using a simple query
+      const [barCount] = await db.select({ count: eq(bars.id, bars.id) }).from(bars);
+      
+      res.json({
+        totalUsers,
+        bannedUsers,
+        admins,
+        onlineNow,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

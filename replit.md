@@ -214,3 +214,36 @@ Preferred communication style: Simple, everyday language.
 2. **Form Feedback**: Shows provider badge or error message in real-time
 3. **Submit Block**: Invalid beat links prevent form submission
 4. **Backend**: Independent validation before database persistence
+
+## Real-time Messaging
+
+### WebSocket Implementation
+- **Location**: `server/websocket.ts` (server), `client/src/hooks/useWebSocket.ts` (client)
+- **Heartbeat**: Client sends ping every 15s, expects pong within 5s or reconnects
+- **Auto-Reconnect**: Exponential backoff (1s to 30s max) on connection failure
+- **Backup Polling**: Messages page always polls even when connected (30s healthy, 5s degraded)
+- **Connection Health**: UI shows healthy (green), degraded (yellow), or disconnected (gray)
+- **Manual Reconnect**: Click connection icon to force reconnect
+
+### Message Delivery
+- **WebSocket Events**: New messages include full payload for immediate display
+- **Query Invalidation**: Conversations and messages queries invalidated on new message
+- **Optimistic Updates**: Messages appear instantly before server confirmation
+
+## Owner Console
+
+### Access
+- **Location**: `/admin` page, "Console" tab (visible to site owner only)
+- **Security**: All actions logged to debug_logs table
+
+### SQL Query Runner
+- **Allowed**: SELECT queries only
+- **Blocked Keywords**: drop, delete, update, insert, alter, create, grant, into, execute, pg_sleep, etc.
+- **Blocked Patterns**: Multiple statements (semicolons), SQL comments (-- and /* */)
+- **Auto LIMIT**: Queries without LIMIT get LIMIT 100 appended
+- **Results**: JSON display with row count
+
+### Quick Actions
+- **User Lookup**: Find user by username
+- **Clear Debug Logs**: Wipe all debug logs
+- **Query History**: Last 10 queries stored for quick re-run

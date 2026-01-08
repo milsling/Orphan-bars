@@ -33,6 +33,12 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [moderateBarId, setModerateBarId] = useState<string | null>(null);
   const [moderateReason, setModerateReason] = useState("");
+  
+  // Console state
+  const [consoleQuery, setConsoleQuery] = useState("");
+  const [consoleOutput, setConsoleOutput] = useState<any>(null);
+  const [consoleHistory, setConsoleHistory] = useState<string[]>([]);
+  const [actionUsername, setActionUsername] = useState("");
 
   const { data: allUsers = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ['admin', 'users'],
@@ -711,6 +717,12 @@ export default function Admin() {
               <TabsTrigger value="debug" className="gap-1 text-xs px-2">
                 <AlertTriangle className="h-4 w-4" />
                 <span className="hidden sm:inline">Logs</span>
+              </TabsTrigger>
+            )}
+            {currentUser?.isOwner && (
+              <TabsTrigger value="console" className="gap-1 text-xs px-2">
+                <Power className="h-4 w-4" />
+                <span className="hidden sm:inline">Console</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -1963,6 +1975,169 @@ export default function Admin() {
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {currentUser?.isOwner && (
+            <TabsContent value="console">
+              <Card className="border-border bg-card/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Power className="h-5 w-5 text-purple-500" />
+                    Owner Console
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label>SQL Query (SELECT only)</Label>
+                    <div className="flex gap-2">
+                      <Textarea
+                        placeholder="SELECT * FROM users LIMIT 10"
+                        value={consoleQuery}
+                        onChange={(e) => setConsoleQuery(e.target.value)}
+                        className="font-mono text-sm min-h-[80px]"
+                        data-testid="input-console-query"
+                      />
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/owner/console/query', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ query: consoleQuery }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.message);
+                          setConsoleOutput(data);
+                          setConsoleHistory(prev => [consoleQuery, ...prev.slice(0, 9)]);
+                          toast({ title: `Query returned ${data.rowCount} rows` });
+                        } catch (error: any) {
+                          toast({ title: "Query Error", description: error.message, variant: "destructive" });
+                        }
+                      }}
+                      disabled={!consoleQuery.trim()}
+                      data-testid="button-run-query"
+                    >
+                      Run Query
+                    </Button>
+                    
+                    {consoleOutput && (
+                      <div className="mt-4 border border-border rounded-lg overflow-hidden">
+                        <div className="bg-muted/50 px-3 py-2 text-sm font-medium">
+                          Results ({consoleOutput.rowCount} rows)
+                        </div>
+                        <div className="max-h-[300px] overflow-auto">
+                          <pre className="p-3 text-xs font-mono whitespace-pre-wrap">
+                            {JSON.stringify(consoleOutput.rows, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-border pt-6">
+                    <h3 className="font-semibold mb-4">Quick Actions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Look up user by username</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="username"
+                            value={actionUsername}
+                            onChange={(e) => setActionUsername(e.target.value)}
+                            data-testid="input-lookup-username"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch('/api/owner/console/action', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({ action: 'get_user_by_username', params: { username: actionUsername } }),
+                                });
+                                const data = await res.json();
+                                if (!res.ok) throw new Error(data.message);
+                                setConsoleOutput({ rows: [data.result], rowCount: 1 });
+                                toast({ title: "User found" });
+                              } catch (error: any) {
+                                toast({ title: "Error", description: error.message, variant: "destructive" });
+                              }
+                            }}
+                            disabled={!actionUsername.trim()}
+                            data-testid="button-lookup-user"
+                          >
+                            Look Up
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Clear Debug Logs</Label>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" className="w-full" data-testid="button-clear-logs">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Clear All Logs
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Clear Debug Logs?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete all debug logs. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch('/api/owner/console/action', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      credentials: 'include',
+                                      body: JSON.stringify({ action: 'clear_debug_logs' }),
+                                    });
+                                    const data = await res.json();
+                                    if (!res.ok) throw new Error(data.message);
+                                    queryClient.invalidateQueries({ queryKey: ['admin', 'debug-logs'] });
+                                    toast({ title: "Debug logs cleared" });
+                                  } catch (error: any) {
+                                    toast({ title: "Error", description: error.message, variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                Clear Logs
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  </div>
+
+                  {consoleHistory.length > 0 && (
+                    <div className="border-t border-border pt-6">
+                      <h3 className="font-semibold mb-3">Recent Queries</h3>
+                      <div className="space-y-2">
+                        {consoleHistory.map((query, idx) => (
+                          <button
+                            key={idx}
+                            className="w-full text-left p-2 text-sm font-mono bg-muted/50 rounded hover:bg-muted truncate"
+                            onClick={() => setConsoleQuery(query)}
+                          >
+                            {query}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </CardContent>
