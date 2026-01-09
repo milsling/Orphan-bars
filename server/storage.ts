@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, debugLogs, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement, type DebugLog, type InsertDebugLog, type AchievementRuleTree, type AchievementCondition, type AchievementRuleGroup, type AchievementConditionType } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, debugLogs, achievementBadgeImages, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement, type DebugLog, type InsertDebugLog, type AchievementRuleTree, type AchievementCondition, type AchievementRuleGroup, type AchievementConditionType } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql, or, ilike, notInArray, ne } from "drizzle-orm";
 import { createHash } from "crypto";
@@ -270,6 +270,12 @@ export interface IStorage {
   createDebugLog(data: Omit<InsertDebugLog, 'id' | 'createdAt'>): Promise<DebugLog>;
   getDebugLogs(limit?: number, action?: string): Promise<DebugLog[]>;
   clearDebugLogs(): Promise<void>;
+  
+  // Achievement badge image methods
+  getAchievementBadgeImage(achievementId: string): Promise<string | null>;
+  getAllAchievementBadgeImages(): Promise<Record<string, string>>;
+  setAchievementBadgeImage(achievementId: string, imageUrl: string): Promise<void>;
+  deleteAchievementBadgeImage(achievementId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2049,6 +2055,38 @@ export class DatabaseStorage implements IStorage {
 
   async clearDebugLogs(): Promise<void> {
     await db.delete(debugLogs);
+  }
+
+  // Achievement badge image methods
+  async getAchievementBadgeImage(achievementId: string): Promise<string | null> {
+    const [result] = await db
+      .select()
+      .from(achievementBadgeImages)
+      .where(eq(achievementBadgeImages.id, achievementId));
+    return result?.imageUrl || null;
+  }
+
+  async getAllAchievementBadgeImages(): Promise<Record<string, string>> {
+    const results = await db.select().from(achievementBadgeImages);
+    const map: Record<string, string> = {};
+    for (const row of results) {
+      map[row.id] = row.imageUrl;
+    }
+    return map;
+  }
+
+  async setAchievementBadgeImage(achievementId: string, imageUrl: string): Promise<void> {
+    await db
+      .insert(achievementBadgeImages)
+      .values({ id: achievementId, imageUrl, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: achievementBadgeImages.id,
+        set: { imageUrl, updatedAt: new Date() },
+      });
+  }
+
+  async deleteAchievementBadgeImage(achievementId: string): Promise<void> {
+    await db.delete(achievementBadgeImages).where(eq(achievementBadgeImages.id, achievementId));
   }
 }
 

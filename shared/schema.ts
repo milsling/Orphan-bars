@@ -367,7 +367,8 @@ export type AchievementRuleTree = AchievementCondition | AchievementRuleGroup;
 export const customAchievements = pgTable("custom_achievements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  emoji: text("emoji").notNull(),
+  emoji: text("emoji"), // Deprecated - use imageUrl instead
+  imageUrl: text("image_url"), // Custom badge image URL
   description: text("description").notNull(),
   rarity: text("rarity").notNull().default("common"),
   conditionType: text("condition_type").notNull(),
@@ -402,17 +403,26 @@ export type DebugLog = typeof debugLogs.$inferSelect;
 export type InsertDebugLog = typeof debugLogs.$inferInsert;
 
 export const ACHIEVEMENTS = {
-  first_bar: { name: "Origin Founder", emoji: "🔥", description: "Posted your first bar", threshold: { barsMinted: 1 }, rarity: "common" as AchievementRarity },
-  bar_slinger: { name: "Bar Slinger", emoji: "💀", description: "Posted 10 bars", threshold: { barsMinted: 10 }, rarity: "rare" as AchievementRarity },
-  bar_lord: { name: "Bar Lord", emoji: "👑", description: "Posted 50 bars", threshold: { barsMinted: 50 }, rarity: "epic" as AchievementRarity },
-  crowd_pleaser: { name: "Crowd Pleaser", emoji: "🎤", description: "Received 100 total likes", threshold: { likesReceived: 100 }, rarity: "rare" as AchievementRarity },
-  cult_leader: { name: "Cult Leader", emoji: "🪖", description: "Gained 50 followers", threshold: { followers: 50 }, rarity: "epic" as AchievementRarity },
-  immortal_bar: { name: "Immortal", emoji: "🌹", description: "One bar reached 500 likes", threshold: { topBarLikes: 500 }, rarity: "legendary" as AchievementRarity },
-  milsling_legacy: { name: "Milsling Heir", emoji: "⚔️", description: "Received 1000 total likes", threshold: { likesReceived: 1000 }, rarity: "legendary" as AchievementRarity },
-  wordsmith: { name: "Wordsmith", emoji: "✍️", description: "Posted 25 bars", threshold: { barsMinted: 25 }, rarity: "rare" as AchievementRarity },
-  rising_star: { name: "Rising Star", emoji: "⭐", description: "Gained 10 followers", threshold: { followers: 10 }, rarity: "common" as AchievementRarity },
-  viral: { name: "Viral", emoji: "🔥", description: "One bar reached 100 likes", threshold: { topBarLikes: 100 }, rarity: "rare" as AchievementRarity },
+  first_bar: { name: "Origin Founder", emoji: "🔥", imageUrl: null as string | null, description: "Posted your first bar", threshold: { barsMinted: 1 }, rarity: "common" as AchievementRarity },
+  bar_slinger: { name: "Bar Slinger", emoji: "💀", imageUrl: null as string | null, description: "Posted 10 bars", threshold: { barsMinted: 10 }, rarity: "rare" as AchievementRarity },
+  bar_lord: { name: "Bar Lord", emoji: "👑", imageUrl: null as string | null, description: "Posted 50 bars", threshold: { barsMinted: 50 }, rarity: "epic" as AchievementRarity },
+  crowd_pleaser: { name: "Crowd Pleaser", emoji: "🎤", imageUrl: null as string | null, description: "Received 100 total likes", threshold: { likesReceived: 100 }, rarity: "rare" as AchievementRarity },
+  cult_leader: { name: "Cult Leader", emoji: "🪖", imageUrl: null as string | null, description: "Gained 50 followers", threshold: { followers: 50 }, rarity: "epic" as AchievementRarity },
+  immortal_bar: { name: "Immortal", emoji: "🌹", imageUrl: null as string | null, description: "One bar reached 500 likes", threshold: { topBarLikes: 500 }, rarity: "legendary" as AchievementRarity },
+  milsling_legacy: { name: "Milsling Heir", emoji: "⚔️", imageUrl: null as string | null, description: "Received 1000 total likes", threshold: { likesReceived: 1000 }, rarity: "legendary" as AchievementRarity },
+  wordsmith: { name: "Wordsmith", emoji: "✍️", imageUrl: null as string | null, description: "Posted 25 bars", threshold: { barsMinted: 25 }, rarity: "rare" as AchievementRarity },
+  rising_star: { name: "Rising Star", emoji: "⭐", imageUrl: null as string | null, description: "Gained 10 followers", threshold: { followers: 10 }, rarity: "common" as AchievementRarity },
+  viral: { name: "Viral", emoji: "🔥", imageUrl: null as string | null, description: "One bar reached 100 likes", threshold: { topBarLikes: 100 }, rarity: "rare" as AchievementRarity },
 } as const;
+
+// Achievement badge images stored in database for built-in achievements
+export const achievementBadgeImages = pgTable("achievement_badge_images", {
+  id: varchar("id").primaryKey(), // matches the achievement key (e.g., "first_bar")
+  imageUrl: text("image_url").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type AchievementBadgeImage = typeof achievementBadgeImages.$inferSelect;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;
 
