@@ -48,8 +48,8 @@ async function buildPlatformContext(usernames: string[]): Promise<PlatformContex
         
         const publicBars = userBars
           .filter(b => b.permissionStatus !== "private")
-          .slice(0, 3)
-          .map(b => b.content.substring(0, 150));
+          .slice(0, 6)
+          .map(b => b.content.substring(0, 300));
         
         context.users!.push({
           username: user.username,

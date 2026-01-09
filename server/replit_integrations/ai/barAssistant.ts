@@ -197,8 +197,8 @@ export async function chatWithAssistant(message: string, platformContext?: Platf
         else if (user.isAdmin) contextBlock += `- Role: Admin\n`;
         if (user.topBars?.length) {
           contextBlock += `- Recent bars:\n`;
-          user.topBars.slice(0, 3).forEach(bar => {
-            contextBlock += `  "${bar.substring(0, 100)}${bar.length > 100 ? '...' : ''}"\n`;
+          user.topBars.forEach(bar => {
+            contextBlock += `  "${bar}"\n`;
           });
         }
         contextBlock += "\n";
