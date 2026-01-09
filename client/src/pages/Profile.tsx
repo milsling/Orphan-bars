@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
 export default function Profile() {
-  const { bars, currentUser, logout } = useBars();
+  const { bars, currentUser, logout, isLoadingUser } = useBars();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -81,6 +81,15 @@ export default function Profile() {
       });
     }
   };
+
+  // Show loading while checking auth
+  if (isLoadingUser) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   // Redirect if not logged in
   if (!currentUser) {
