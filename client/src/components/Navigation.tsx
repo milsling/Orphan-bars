@@ -184,8 +184,8 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* Mobile Bottom Nav */}
-      <div className="md:hidden">
+      {/* Bottom Nav - visible on all screens */}
+      <div>
         <BottomNav onNewMessage={() => setNewMessageOpen(true)} />
       </div>
       
