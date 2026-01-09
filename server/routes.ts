@@ -218,10 +218,15 @@ export async function registerRoutes(
           console.error(`[LOGIN] Session creation failed:`, err);
           return next(err);
         }
-        if (req.body.rememberMe && req.session) {
-          req.session.cookie.maxAge = 48 * 60 * 60 * 1000;
+        // Remember Me: 30 days, otherwise session expires when browser closes
+        if (req.session) {
+          if (req.body.rememberMe) {
+            req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+          } else {
+            req.session.cookie.maxAge = undefined; // Session cookie - expires on browser close
+          }
         }
-        console.log(`[LOGIN] Session created for user ${user.id}`);
+        console.log(`[LOGIN] Session created for user ${user.id}, rememberMe=${!!req.body.rememberMe}`);
         res.json(user);
       });
     })(req, res, next);

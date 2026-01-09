@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, Circle, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ type OnlineStatusType = "online" | "offline" | "busy";
 export function OnlineStatusIndicator() {
   const { currentUser } = useBars();
   const queryClient = useQueryClient();
-  const manualStatusRef = useRef<OnlineStatusType | null>(null);
 
   const { data: onlineCount = 0 } = useQuery({
     queryKey: ['onlineCount'],
@@ -51,16 +50,14 @@ export function OnlineStatusIndicator() {
   });
 
   const setManualStatus = (status: OnlineStatusType) => {
-    manualStatusRef.current = status;
     statusMutation.mutate(status);
   };
 
   useEffect(() => {
     if (!currentUser) return;
 
-    if (currentUser.onlineStatus !== 'online' && currentUser.onlineStatus !== 'busy' && !manualStatusRef.current) {
-      statusMutation.mutate('online');
-    }
+    // Respect user's stored status - only send heartbeats, don't override their choice
+    // The server stores their preferred status, we just need to keep the session alive
 
     const sendHeartbeat = () => {
       fetch('/api/online/heartbeat', {
@@ -73,26 +70,16 @@ export function OnlineStatusIndicator() {
     const heartbeatInterval = setInterval(sendHeartbeat, 30000);
 
     const handleVisibility = () => {
-      if (document.hidden) {
-        return;
-      } else {
+      if (!document.hidden) {
         sendHeartbeat();
       }
     };
 
-    const handleBeforeUnload = () => {
-      manualStatusRef.current = null;
-      const blob = new Blob([JSON.stringify({ status: 'offline' })], { type: 'application/json' });
-      navigator.sendBeacon('/api/online/status', blob);
-    };
-
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('beforeunload', handleBeforeUnload);
     
     return () => {
       clearInterval(heartbeatInterval);
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [currentUser]);
 
