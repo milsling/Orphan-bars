@@ -161,8 +161,59 @@ Respond in JSON format:
   }
 }
 
-export async function chatWithAssistant(message: string, context?: string): Promise<string> {
+export interface PlatformContext {
+  users?: Array<{
+    username: string;
+    bio?: string;
+    barCount: number;
+    followerCount: number;
+    followingCount: number;
+    isOwner?: boolean;
+    isAdmin?: boolean;
+    topBars?: string[];
+  }>;
+  bars?: Array<{
+    content: string;
+    author: string;
+    category?: string;
+    likes: number;
+  }>;
+}
+
+export async function chatWithAssistant(message: string, platformContext?: PlatformContext): Promise<string> {
   try {
+    let contextBlock = "";
+    
+    if (platformContext?.users?.length) {
+      contextBlock += "\n\n=== REAL USER DATA FROM ORPHAN BARS ===\n";
+      contextBlock += "The following is VERIFIED information from the platform database. Use ONLY this data when discussing these users:\n\n";
+      for (const user of platformContext.users) {
+        contextBlock += `@${user.username}:\n`;
+        contextBlock += `- Bio: ${user.bio || "(no bio set)"}\n`;
+        contextBlock += `- Bars posted: ${user.barCount}\n`;
+        contextBlock += `- Followers: ${user.followerCount}\n`;
+        contextBlock += `- Following: ${user.followingCount}\n`;
+        if (user.isOwner) contextBlock += `- Role: Site Owner\n`;
+        else if (user.isAdmin) contextBlock += `- Role: Admin\n`;
+        if (user.topBars?.length) {
+          contextBlock += `- Recent bars:\n`;
+          user.topBars.slice(0, 3).forEach(bar => {
+            contextBlock += `  "${bar.substring(0, 100)}${bar.length > 100 ? '...' : ''}"\n`;
+          });
+        }
+        contextBlock += "\n";
+      }
+      contextBlock += "=== END REAL DATA ===\n";
+    }
+
+    if (platformContext?.bars?.length) {
+      contextBlock += "\n=== REAL BARS FROM THE PLATFORM ===\n";
+      for (const bar of platformContext.bars) {
+        contextBlock += `"${bar.content}" - @${bar.author} (${bar.likes} likes)\n`;
+      }
+      contextBlock += "=== END BARS ===\n";
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -173,9 +224,16 @@ export async function chatWithAssistant(message: string, context?: string): Prom
 - Write better punchlines and wordplay  
 - Find rhymes and improve flow
 - Learn about hip-hop culture and references
+- Answer questions about users on the platform
 
-Be conversational, helpful, and knowledgeable about hip-hop. Keep responses concise but informative.
-${context ? `\nContext: ${context}` : ""}`
+CRITICAL RULES:
+1. When asked about specific users on Orphan Bars, ONLY use the verified data provided in the context below. 
+2. If a user is NOT in the provided context, say "I don't have information about that user" - DO NOT make up information.
+3. Never invent follower counts, bar counts, or biographical details.
+4. If someone asks "who is X" and X is not in the context, acknowledge you don't have their profile data.
+5. You can still discuss hip-hop culture, techniques, and general topics freely.
+
+Be conversational, helpful, and honest. Keep responses concise.${contextBlock}`
         },
         {
           role: "user",
