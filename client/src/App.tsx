@@ -26,6 +26,7 @@ import { BarProvider } from "@/context/BarContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { SwipeBackNavigation } from "@/components/SwipeBackNavigation";
+import AIAssistant from "@/components/AIAssistant";
 
 function Router() {
   const [location] = useLocation();
@@ -85,6 +86,7 @@ function App() {
           <SwipeBackNavigation>
             <Router />
           </SwipeBackNavigation>
+          <AIAssistant />
         </TooltipProvider>
       </BarProvider>
     </QueryClientProvider>

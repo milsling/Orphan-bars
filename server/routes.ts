@@ -9,6 +9,7 @@ import passport from "passport";
 import { insertUserSchema, insertBarSchema, updateBarSchema, ACHIEVEMENTS } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { registerAIRoutes } from "./replit_integrations/ai";
 import { sendVerificationEmail, sendPasswordResetEmail, generateVerificationCode } from "./email";
 import { setupWebSocket, notifyNewMessage } from "./websocket";
 import { analyzeContent, normalizeText, type FlaggedPhraseRule } from "./moderation";
@@ -51,6 +52,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   setupAuth(app);
   registerObjectStorageRoutes(app);
+  registerAIRoutes(app);
   setupWebSocket(httpServer, sessionParser);
 
   // Auth routes
