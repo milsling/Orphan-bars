@@ -83,22 +83,6 @@ export default function Profile() {
     }
   };
 
-  // Redirect if not logged in (after loading completes)
-  useEffect(() => {
-    if (!isLoadingUser && !currentUser) {
-      setLocation("/auth");
-    }
-  }, [isLoadingUser, currentUser, setLocation]);
-
-  // Show loading while checking auth or if no user yet
-  if (isLoadingUser || !currentUser) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
   const { data: likedBars = [] } = useQuery<any[]>({
     queryKey: ["liked-bars", currentUser?.id],
     queryFn: async () => {
@@ -118,6 +102,22 @@ export default function Profile() {
     },
     enabled: !!currentUser,
   });
+
+  // Redirect if not logged in (after loading completes)
+  useEffect(() => {
+    if (!isLoadingUser && !currentUser) {
+      setLocation("/auth");
+    }
+  }, [isLoadingUser, currentUser, setLocation]);
+
+  // Show loading while checking auth or if no user yet
+  if (isLoadingUser || !currentUser) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   const userBars = bars.filter(bar => bar.userId === currentUser.id);
 
