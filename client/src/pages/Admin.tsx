@@ -566,8 +566,8 @@ export default function Admin() {
 
   const setBadgeImageMutation = useMutation({
     mutationFn: async ({ id, imageUrl }: { id: string; imageUrl: string }) => {
-      const res = await fetch(`/api/achievements/badge-images/${id}`, {
-        method: 'PUT',
+      const res = await fetch(`/api/admin/achievements/${id}/badge-image`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ imageUrl }),
@@ -587,7 +587,7 @@ export default function Admin() {
 
   const deleteBadgeImageMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/achievements/badge-images/${id}`, {
+      const res = await fetch(`/api/admin/achievements/${id}/badge-image`, {
         method: 'DELETE',
         credentials: 'include',
       });
