@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Send, Loader2, X } from "lucide-react";
+import { Sparkles, Send, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBars } from "@/context/BarContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,6 +19,8 @@ export default function AIAssistant() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [, setLocation] = useLocation();
+  const { currentUser } = useBars();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,14 +52,26 @@ export default function AIAssistant() {
 
   return (
     <>
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-4 md:bottom-6 h-14 w-14 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/30 z-50"
-        size="icon"
-        data-testid="button-ai-assistant"
-      >
-        <Sparkles className="h-6 w-6" />
-      </Button>
+      <div className="fixed bottom-20 right-4 md:bottom-6 z-50 flex flex-col gap-3">
+        {currentUser && (
+          <Button
+            onClick={() => setLocation("/post")}
+            className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30"
+            size="icon"
+            data-testid="button-drop-bar-floating"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        )}
+        <Button
+          onClick={() => setIsOpen(true)}
+          className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-lg shadow-purple-500/30"
+          size="icon"
+          data-testid="button-ai-assistant"
+        >
+          <Sparkles className="h-6 w-6" />
+        </Button>
+      </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-md h-[70vh] flex flex-col p-0 gap-0">
