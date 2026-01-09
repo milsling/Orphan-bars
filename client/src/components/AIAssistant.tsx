@@ -52,11 +52,11 @@ export default function AIAssistant() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-4 z-50 hidden md:flex flex-col gap-3">
+      <div className="fixed bottom-20 right-4 md:bottom-6 z-50 flex flex-col gap-3">
         {currentUser && (
           <Button
             onClick={() => setLocation("/post")}
-            className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30"
+            className="hidden md:flex h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/30"
             size="icon"
             data-testid="button-drop-bar-floating"
           >
