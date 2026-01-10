@@ -424,6 +424,34 @@ export const achievementBadgeImages = pgTable("achievement_badge_images", {
 
 export type AchievementBadgeImage = typeof achievementBadgeImages.$inferSelect;
 
+export const tagAnimationOptions = ["none", "pulse", "glow", "shimmer", "bounce", "sparkle", "gradient"] as const;
+export type TagAnimation = typeof tagAnimationOptions[number];
+
+export const customTags = pgTable("custom_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name"),
+  imageUrl: text("image_url"),
+  animation: text("animation").notNull().default("none"),
+  color: text("color"),
+  backgroundColor: text("background_color"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const customTagsRelations = relations(customTags, ({ one }) => ({
+  creator: one(users, { fields: [customTags.createdBy], references: [users.id] }),
+}));
+
+export type CustomTag = typeof customTags.$inferSelect;
+export type InsertCustomTag = typeof customTags.$inferInsert;
+
+export const insertCustomTagSchema = createInsertSchema(customTags).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type AchievementId = keyof typeof ACHIEVEMENTS;
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
