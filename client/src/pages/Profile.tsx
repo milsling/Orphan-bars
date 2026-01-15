@@ -2,7 +2,7 @@ import Navigation from "@/components/Navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import BarCard from "@/components/BarCard";
-import { Settings, Share2, MapPin, Edit, Trophy } from "lucide-react";
+import { Settings, Share2, MapPin, Edit, Trophy, Star, Crown, Zap } from "lucide-react";
 import { ACHIEVEMENTS, type AchievementId, type AchievementRarity } from "@shared/schema";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -60,9 +60,38 @@ export default function Profile() {
     staleTime: 60000,
   });
 
+  const { data: xpStats } = useQuery<{ xp: number; level: number; xpForNextLevel: number; xpProgress: number }>({
+    queryKey: ["user-xp", currentUser?.username],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${currentUser!.username}/xp`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch XP stats");
+      return res.json();
+    },
+    enabled: !!currentUser,
+    staleTime: 30000,
+  });
+
   const earnedCount = userAchievements.length;
   const totalCount = totalAchievements?.total || Object.keys(ACHIEVEMENTS).length;
   const progressPercentage = totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0;
+
+  const level = xpStats?.level ?? currentUser?.level ?? 1;
+  const xp = xpStats?.xp ?? currentUser?.xp ?? 0;
+  const xpProgress = xpStats?.xpProgress ?? 0;
+  const xpForNextLevel = xpStats?.xpForNextLevel ?? 100;
+  const xpForCurrentLevel = Math.pow(level - 1, 2) * 100;
+  const xpInCurrentLevel = xp - xpForCurrentLevel;
+  const xpNeededForNext = xpForNextLevel - xpForCurrentLevel;
+
+  const getPerks = (userLevel: number) => {
+    const perks = [];
+    if (userLevel >= 3) perks.push({ icon: "🏷️", label: "Extra custom tag slot" });
+    if (userLevel >= 5) perks.push({ icon: "📈", label: "Feed priority boost" });
+    if (userLevel >= 10) perks.push({ icon: "👑", label: "Legend flair" });
+    return perks;
+  };
+
+  const activePerks = getPerks(level);
 
   const handleShare = async () => {
     if (!currentUser) return;
@@ -224,6 +253,53 @@ export default function Profile() {
               <span className="font-bold text-foreground">{stats?.followingCount ?? 0}</span>
               <span className="text-muted-foreground">Following</span>
             </div>
+          </div>
+
+          {/* XP & Level Display */}
+          <div className="p-4 rounded-lg bg-gradient-to-r from-purple-900/30 to-violet-800/20 border border-purple-500/30" data-testid="xp-section">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {level >= 10 ? (
+                  <Crown className="h-6 w-6 text-amber-400" />
+                ) : (
+                  <Star className="h-6 w-6 text-purple-400" />
+                )}
+                <span className="text-2xl font-bold text-purple-300" data-testid="text-level">Level {level}</span>
+                {level >= 10 && (
+                  <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full">Legend</span>
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground" data-testid="text-xp">
+                {xp.toLocaleString()} XP
+              </div>
+            </div>
+            
+            <div className="mb-2">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>{xpInCurrentLevel.toLocaleString()} / {xpNeededForNext.toLocaleString()} XP</span>
+                <span>To Level {level + 1}</span>
+              </div>
+              <div className="h-2 bg-background/50 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-purple-500 to-violet-400 transition-all duration-500"
+                  style={{ width: `${xpProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {activePerks.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {activePerks.map((perk, idx) => (
+                  <span 
+                    key={idx}
+                    className="inline-flex items-center gap-1 text-xs bg-purple-500/20 text-purple-200 px-2 py-1 rounded-full border border-purple-500/30"
+                  >
+                    <span>{perk.icon}</span>
+                    <span>{perk.label}</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {currentUser.bio && (

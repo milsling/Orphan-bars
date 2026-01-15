@@ -6,7 +6,7 @@ import BarCard from "@/components/BarCard";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, MapPin, Share2, UserPlus, UserMinus, Users, MessageCircle, Clock, Trophy } from "lucide-react";
+import { ArrowLeft, Loader2, MapPin, Share2, UserPlus, UserMinus, Users, MessageCircle, Clock, Trophy, Star, Crown } from "lucide-react";
 import { Link } from "wouter";
 import { ACHIEVEMENTS, type AchievementId, type AchievementRarity } from "@shared/schema";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -86,6 +86,17 @@ export default function UserProfile() {
     gcTime: 300000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+  });
+
+  const { data: xpStats } = useQuery<{ xp: number; level: number; xpForNextLevel: number; xpProgress: number }>({
+    queryKey: ["user-xp", username],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${username}/xp`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch XP stats");
+      return res.json();
+    },
+    enabled: !!username,
+    staleTime: 30000,
   });
 
   const { data: isFollowing = false } = useQuery({
@@ -284,6 +295,14 @@ export default function UserProfile() {
                 <p className="mt-2 text-sm">{user.bio}</p>
               )}
               <div className="flex justify-center sm:justify-start gap-6 mt-4 text-sm">
+                <div className="flex items-center gap-1">
+                  {(xpStats?.level ?? 1) >= 10 ? (
+                    <Crown className="h-4 w-4 text-amber-400" />
+                  ) : (
+                    <Star className="h-4 w-4 text-purple-400" />
+                  )}
+                  <span className="font-bold text-purple-300">Lv. {xpStats?.level ?? 1}</span>
+                </div>
                 <div>
                   <span className="font-bold">{stats?.barsCount || bars.length}</span>
                   <span className="text-muted-foreground ml-1">Bars</span>

@@ -1,0 +1,53 @@
+Implement a complete XP + levels system on orphanbars.com using **Medium autonomy only**. Do not touch achievements, WebSockets, DMs, moderation, real-time features, or unrelated code. Focus strictly on user table, event handlers, level logic, profile UI, and basic perks.
+
+Do everything in this order:
+
+1. Database changes:
+   - Add column 'xp' integer to users table (default 0, NOT NULL)
+   - Add column 'level' integer to users table (default 1, NOT NULL)
+   - Add column 'last_xp_update' timestamp to users table (default CURRENT_TIMESTAMP)
+
+2. XP earning rules (add to existing event handlers):
+   - When a user posts a bar: +10 XP
+   - When a user receives a like on their own bar: +5 XP per like
+   - When a user's bar is adopted (as original creator): +20 XP
+   - When a user makes a comment: +3 XP
+   - When a user bookmarks a bar: +2 XP
+   - Rate limits (per user per day, reset at midnight UTC):
+     - Max 50 XP from likes received
+     - Max 30 XP from comments made
+     - Max 20 XP from bookmarks
+   - Use simple if-checks against last_xp_update + daily counters (no new tables needed)
+
+3. Level-up logic:
+   - After any XP increment, recalculate level = floor(sqrt(xp / 100)) + 1
+   - If level increases, update user.level and trigger a notification (bell) with message: "Level up! You're now Level [new_level]"
+   - All in one transaction: XP + level + notification
+
+4. Profile page UI additions:
+   - Add below username: "Level [level]" in big purple text + small badge icon if level >=10
+   - Add "XP: [current_xp] / [xp_needed_for_next] to Level [next_level]"
+   - Add CSS progress bar (div or <progress>) showing % to next level
+   - Show active perks: "Level 3+: Extra custom tag slot" | "Level 5+: Feed priority" | "Level 10+: Legend flair"
+
+5. Perks implementation:
+   - Level >=3: allow one extra custom tag slot (modify tag creation limit check)
+   - Level >=5: add level-based sort weight in feed queries (higher level = higher rank)
+   - Level >=10: add crown icon or "Legend" border on profile
+
+6. One-time retroactive XP calculation:
+   - Create a new endpoint/script (/retro-xp) that runs once:
+     - For each user: xp = (bars_posted_count * 10) + (likes_received_on_own_bars * 5) + (adoptions_credited * 20) + (comments_made * 3) + (bookmarks_added * 2)
+     - Then recalculate and set level
+   - Make it safe (idempotent, only run once)
+
+7. Safety & validation:
+   - Never allow negative XP
+   - Batch XP updates (no real-time WS spam)
+   - Prevent self-like/self-comment XP farming
+
+After implementation, give me:
+- A short test checklist (post bar, like own bar, comment, get adopted, etc.)
+- Expected XP/level after sample actions
+
+Do all this in one cohesive change. No partial work. Test with dummy data before finishing.

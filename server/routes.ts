@@ -440,6 +440,9 @@ export async function registerRoutes(
         }
       }
       
+      // Award XP for posting a bar (+10 XP)
+      await storage.awardXp(req.user!.id, 10, 'bar_posted');
+      
       // Check for newly unlocked achievements after posting bar
       const newAchievements = await storage.checkAndUnlockAchievements(req.user!.id);
       for (const achievementId of newAchievements) {
@@ -594,6 +597,9 @@ export async function registerRoutes(
           barId: bar.id,
           message: `@${req.user!.username} adopted your bar!`
         });
+        
+        // Award XP to original creator for adoption (+20 XP)
+        await storage.awardXp(bar.userId, 20, 'adoption_credited');
       }
       
       res.json(usage);
@@ -885,6 +891,9 @@ export async function registerRoutes(
           });
           logDetails.notificationSent = true;
           
+          // Award XP to bar owner for receiving a like (+5 XP, prevents self-like XP)
+          await storage.awardXp(bar.userId, 5, 'like_received');
+          
           // Check achievements for the bar owner (they received a like)
           const newAchievements = await storage.checkAndUnlockAchievements(bar.userId);
           logDetails.newAchievements = newAchievements;
@@ -1051,6 +1060,11 @@ export async function registerRoutes(
           barId: bar.id,
           message: `@${req.user!.username} commented on your bar`
         });
+      }
+      
+      // Award XP to commenter (+3 XP, not for self-commenting)
+      if (bar && bar.userId !== req.user!.id) {
+        await storage.awardXp(req.user!.id, 3, 'comment_made');
       }
       
       res.json(comment);
@@ -1380,6 +1394,15 @@ export async function registerRoutes(
   app.post("/api/bars/:id/bookmark", isAuthenticated, async (req, res) => {
     try {
       const bookmarked = await storage.toggleBookmark(req.user!.id, req.params.id);
+      
+      // Award XP for bookmarking (+2 XP, only when bookmarking, not unbookmarking)
+      if (bookmarked) {
+        const bar = await storage.getBarById(req.params.id);
+        if (bar && bar.userId !== req.user!.id) {
+          await storage.awardXp(req.user!.id, 2, 'bookmark_added');
+        }
+      }
+      
       res.json({ bookmarked });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1542,6 +1565,44 @@ export async function registerRoutes(
       }
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // XP Stats endpoint
+  app.get("/api/users/:username/xp", async (req, res) => {
+    try {
+      const user = await storage.getUserByUsername(req.params.username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const xpStats = await storage.getUserXpStats(user.id);
+      res.json(xpStats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Retroactive XP calculation (admin only, idempotent)
+  app.post("/api/retro-xp", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user!.isOwner && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const allUsers = await storage.getAllUsers();
+      const results: Array<{ userId: string; username: string; xp: number; level: number }> = [];
+      
+      for (const user of allUsers) {
+        const { xp, level } = await storage.calculateRetroactiveXp(user.id);
+        results.push({ userId: user.id, username: user.username, xp, level });
+      }
+      
+      res.json({ 
+        message: `Retroactive XP calculated for ${results.length} users`,
+        results 
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -284,6 +284,12 @@ export interface IStorage {
   getAllAchievementBadgeImages(): Promise<Record<string, string>>;
   setAchievementBadgeImage(achievementId: string, imageUrl: string): Promise<void>;
   deleteAchievementBadgeImage(achievementId: string): Promise<void>;
+  
+  // XP and Level methods
+  awardXp(userId: string, amount: number, source: 'bar_posted' | 'like_received' | 'adoption_credited' | 'comment_made' | 'bookmark_added'): Promise<{ xp: number; level: number; leveledUp: boolean; previousLevel: number }>;
+  getUserXpStats(userId: string): Promise<{ xp: number; level: number; xpForNextLevel: number; xpProgress: number }>;
+  calculateRetroactiveXp(userId: string): Promise<{ xp: number; level: number }>;
+  resetDailyXpLimits(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2176,6 +2182,154 @@ export class DatabaseStorage implements IStorage {
   async deleteCustomCategory(id: string): Promise<boolean> {
     const result = await db.delete(customCategories).where(eq(customCategories.id, id));
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // XP and Level methods
+  private calculateLevel(xp: number): number {
+    return Math.floor(Math.sqrt(xp / 100)) + 1;
+  }
+
+  private getXpForLevel(level: number): number {
+    return Math.pow(level - 1, 2) * 100;
+  }
+
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return date1.getUTCFullYear() === date2.getUTCFullYear() &&
+           date1.getUTCMonth() === date2.getUTCMonth() &&
+           date1.getUTCDate() === date2.getUTCDate();
+  }
+
+  async awardXp(
+    userId: string, 
+    amount: number, 
+    source: 'bar_posted' | 'like_received' | 'adoption_credited' | 'comment_made' | 'bookmark_added'
+  ): Promise<{ xp: number; level: number; leveledUp: boolean; previousLevel: number }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const now = new Date();
+    const lastUpdate = user.lastXpUpdate || new Date(0);
+    const isNewDay = !this.isSameDay(lastUpdate, now);
+
+    let dailyLikes = isNewDay ? 0 : (user.dailyXpLikes || 0);
+    let dailyComments = isNewDay ? 0 : (user.dailyXpComments || 0);
+    let dailyBookmarks = isNewDay ? 0 : (user.dailyXpBookmarks || 0);
+
+    let xpToAdd = amount;
+
+    if (source === 'like_received') {
+      const remaining = Math.max(0, 50 - dailyLikes);
+      xpToAdd = Math.min(amount, remaining);
+      dailyLikes += xpToAdd;
+    } else if (source === 'comment_made') {
+      const remaining = Math.max(0, 30 - dailyComments);
+      xpToAdd = Math.min(amount, remaining);
+      dailyComments += xpToAdd;
+    } else if (source === 'bookmark_added') {
+      const remaining = Math.max(0, 20 - dailyBookmarks);
+      xpToAdd = Math.min(amount, remaining);
+      dailyBookmarks += xpToAdd;
+    }
+
+    if (xpToAdd <= 0) {
+      return {
+        xp: user.xp || 0,
+        level: user.level || 1,
+        leveledUp: false,
+        previousLevel: user.level || 1,
+      };
+    }
+
+    const newXp = Math.max(0, (user.xp || 0) + xpToAdd);
+    const previousLevel = user.level || 1;
+    const newLevel = this.calculateLevel(newXp);
+    const leveledUp = newLevel > previousLevel;
+
+    await db.update(users).set({
+      xp: newXp,
+      level: newLevel,
+      lastXpUpdate: now,
+      dailyXpLikes: dailyLikes,
+      dailyXpComments: dailyComments,
+      dailyXpBookmarks: dailyBookmarks,
+    }).where(eq(users.id, userId));
+
+    if (leveledUp) {
+      await this.createNotification({
+        userId,
+        type: 'level_up',
+        message: `Level up! You're now Level ${newLevel}`,
+      });
+    }
+
+    return { xp: newXp, level: newLevel, leveledUp, previousLevel };
+  }
+
+  async getUserXpStats(userId: string): Promise<{ xp: number; level: number; xpForNextLevel: number; xpProgress: number }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { xp: 0, level: 1, xpForNextLevel: 100, xpProgress: 0 };
+    }
+
+    const xp = user.xp || 0;
+    const level = user.level || 1;
+    const xpForCurrentLevel = this.getXpForLevel(level);
+    const xpForNextLevel = this.getXpForLevel(level + 1);
+    const xpInCurrentLevel = xp - xpForCurrentLevel;
+    const xpNeededForNext = xpForNextLevel - xpForCurrentLevel;
+    const xpProgress = Math.min(100, Math.round((xpInCurrentLevel / xpNeededForNext) * 100));
+
+    return { xp, level, xpForNextLevel, xpProgress };
+  }
+
+  async calculateRetroactiveXp(userId: string): Promise<{ xp: number; level: number }> {
+    const [barsCount] = await db.select({ count: count() }).from(bars).where(eq(bars.userId, userId));
+    
+    const [likesReceived] = await db
+      .select({ count: count() })
+      .from(likes)
+      .innerJoin(bars, eq(likes.barId, bars.id))
+      .where(and(eq(bars.userId, userId), ne(likes.userId, userId)));
+    
+    const [adoptionsCredited] = await db
+      .select({ count: count() })
+      .from(barUsages)
+      .innerJoin(bars, eq(barUsages.barId, bars.id))
+      .where(and(eq(bars.userId, userId), ne(barUsages.userId, userId)));
+    
+    const [commentsMade] = await db.select({ count: count() }).from(comments).where(eq(comments.userId, userId));
+    
+    const [bookmarksAdded] = await db.select({ count: count() }).from(bookmarks).where(eq(bookmarks.userId, userId));
+
+    const totalXp = 
+      (barsCount?.count || 0) * 10 +
+      (likesReceived?.count || 0) * 5 +
+      (adoptionsCredited?.count || 0) * 20 +
+      (commentsMade?.count || 0) * 3 +
+      (bookmarksAdded?.count || 0) * 2;
+
+    const level = this.calculateLevel(totalXp);
+
+    await db.update(users).set({
+      xp: totalXp,
+      level: level,
+      lastXpUpdate: new Date(),
+      dailyXpLikes: 0,
+      dailyXpComments: 0,
+      dailyXpBookmarks: 0,
+    }).where(eq(users.id, userId));
+
+    return { xp: totalXp, level };
+  }
+
+  async resetDailyXpLimits(): Promise<void> {
+    await db.update(users).set({
+      dailyXpLikes: 0,
+      dailyXpComments: 0,
+      dailyXpBookmarks: 0,
+    });
   }
 }
 

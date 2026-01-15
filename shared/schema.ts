@@ -30,6 +30,12 @@ export const users = pgTable("users", {
   lastSeenAt: timestamp("last_seen_at"),
   messagePrivacy: text("message_privacy").notNull().default("friends_only"),
   displayedBadges: text("displayed_badges").array(),
+  xp: integer("xp").notNull().default(0),
+  level: integer("level").notNull().default(1),
+  lastXpUpdate: timestamp("last_xp_update").defaultNow(),
+  dailyXpLikes: integer("daily_xp_likes").notNull().default(0),
+  dailyXpComments: integer("daily_xp_comments").notNull().default(0),
+  dailyXpBookmarks: integer("daily_xp_bookmarks").notNull().default(0),
 });
 
 export const verificationCodes = pgTable("verification_codes", {
