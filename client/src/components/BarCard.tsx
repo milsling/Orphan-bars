@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { BarWithUser } from "@shared/schema";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag, Info, LockKeyhole, Star, Crown } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag, Info, LockKeyhole, Star, Crown, Sparkles } from "lucide-react";
+import AIAssistant from "@/components/AIAssistant";
 import { BarMediaPlayer } from "@/components/BarMediaPlayer";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { shareContent, getBarShareData } from "@/lib/share";
@@ -305,6 +306,7 @@ export default function BarCard({ bar }: BarCardProps) {
   const [originalityData, setOriginalityData] = useState<Array<{ id: string; proofBarId: string; similarity: number; username?: string }>>([]);
   const [isCheckingOriginality, setIsCheckingOriginality] = useState(false);
   const [isLockDialogOpen, setIsLockDialogOpen] = useState(false);
+  const [isOrphieOpen, setIsOrphieOpen] = useState(false);
 
   const isOwner = currentUser?.id === bar.user.id;
   const isLocked = (bar as any).isLocked;
@@ -717,6 +719,10 @@ export default function BarCard({ bar }: BarCardProps) {
                 <DropdownMenuItem onClick={handleCheckOriginality} disabled={isCheckingOriginality} data-testid={`button-originality-${bar.id}`}>
                   <Search className="h-4 w-4 mr-2" />
                   {isCheckingOriginality ? "Checking..." : "Originality Check"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsOrphieOpen(true)} data-testid={`button-orphie-${bar.id}`}>
+                  <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
+                  Break It Down
                 </DropdownMenuItem>
                 {isOwner && (
                   <>
@@ -1264,6 +1270,13 @@ export default function BarCard({ bar }: BarCardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AIAssistant 
+        open={isOrphieOpen} 
+        onOpenChange={setIsOrphieOpen}
+        hideFloatingButton
+        initialPrompt={isOrphieOpen ? `Break down this bar for me and explain the wordplay, punchlines, and meaning:\n\n"${stripHtml(bar.content)}"` : undefined}
+      />
     </>
   );
 }

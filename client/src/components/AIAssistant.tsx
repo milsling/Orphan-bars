@@ -15,9 +15,10 @@ interface AIAssistantProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideFloatingButton?: boolean;
+  initialPrompt?: string;
 }
 
-export default function AIAssistant({ open, onOpenChange, hideFloatingButton = false }: AIAssistantProps) {
+export default function AIAssistant({ open, onOpenChange, hideFloatingButton = false, initialPrompt }: AIAssistantProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   
   const isOpen = open !== undefined ? open : internalOpen;
@@ -25,17 +26,30 @@ export default function AIAssistant({ open, onOpenChange, hideFloatingButton = f
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [hasProcessedInitialPrompt, setHasProcessedInitialPrompt] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  useEffect(() => {
+    if (isOpen && initialPrompt && !hasProcessedInitialPrompt && !isLoading) {
+      setHasProcessedInitialPrompt(true);
+      sendMessageWithContent(initialPrompt);
+    }
+  }, [isOpen, initialPrompt, hasProcessedInitialPrompt, isLoading]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHasProcessedInitialPrompt(false);
+    }
+  }, [isOpen]);
+
+  const sendMessageWithContent = async (content: string) => {
+    if (!content.trim() || isLoading) return;
     
-    const userMessage = input.trim();
-    setInput("");
+    const userMessage = content.trim();
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
 
@@ -53,6 +67,12 @@ export default function AIAssistant({ open, onOpenChange, hideFloatingButton = f
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    setInput("");
+    await sendMessageWithContent(input);
   };
 
   return (
