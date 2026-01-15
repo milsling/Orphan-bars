@@ -155,10 +155,18 @@ Preferred communication style: Simple, everyday language.
 - **Approval Workflow**: Admin-created achievements require site owner approval before going live
 
 ### Rule Tree Structure
-- **Condition Node**: `{type: "condition", metric: string, comparator: string, value: number, keyword?: string}`
+- **Condition Node**: `{type: "condition", metric: string, comparator: string, value: number, keyword?: string, negated?: boolean, timeRange?: {start: number, end: number}}`
 - **Group Node**: `{type: "group", operator: "AND" | "OR", children: AchievementRuleTree[]}`
 - **Comparators**: `>=`, `>`, `=`, `<`, `<=`
 - **Boolean Metrics**: Coerced to 0/1 for numeric comparison (e.g., night_owl >= 1)
+- **NOT Logic**: Each condition can be negated with `negated: true`, which inverts the result in evaluation
+
+### Achievement Creator UI Features
+- **NOT Checkbox**: Each condition block has a NOT checkbox to invert the condition result
+- **Color-Coded Preview**: AND shown in blue, OR shown in orange for visual clarity
+- **Client-Side Validation**: Detects duplicate conditions, warns on logical conflicts (condition AND NOT same condition)
+- **Rarity Suggestions**: Suggests rarity based on complexity (many ORs → common, heavy ANDs + high thresholds → legendary)
+- **Time Range Picker**: For Early Bird and Night Owl metrics, custom time windows can be set (defaults: 5-9 AM for early bird, 10 PM-4 AM for night owl)
 
 ## Proof-of-Origin System
 
