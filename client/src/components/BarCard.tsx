@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BarWithUser } from "@shared/schema";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag, Info, LockKeyhole } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pencil, Trash2, Send, X, Bookmark, MessageSquarePlus, Shield, Users, Lock, Copy, QrCode, FileCheck, Image, ThumbsDown, Search, AlertTriangle, CheckCircle, ExternalLink, Music, Flag, Info, LockKeyhole, Star, Crown } from "lucide-react";
 import { BarMediaPlayer } from "@/components/BarMediaPlayer";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { shareContent, getBarShareData } from "@/lib/share";
@@ -673,6 +673,16 @@ export default function BarCard({ bar }: BarCardProps) {
                       @{bar.user.username}
                     </span>
                   </Link>
+                  {(bar.user.level ?? 1) > 1 && (
+                    <span className="flex items-center gap-0.5 text-[10px] text-purple-400" title={`Level ${bar.user.level}`}>
+                      {(bar.user.level ?? 1) >= 10 ? (
+                        <Crown className="h-3 w-3 text-amber-400" />
+                      ) : (
+                        <Star className="h-3 w-3" />
+                      )}
+                      <span className="font-medium">{bar.user.level}</span>
+                    </span>
+                  )}
                   {bar.user.membershipTier !== "free" && (
                     <span className="text-[10px] text-primary">✓</span>
                   )}

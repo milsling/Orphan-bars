@@ -348,6 +348,7 @@ export class DatabaseStorage implements IStorage {
           isAdmin: users.isAdmin,
           isAdminPlus: users.isAdminPlus,
           isOwner: users.isOwner,
+          level: users.level,
         },
         commentCount: sql<number>`(SELECT COUNT(*) FROM comments WHERE comments.bar_id = ${bars.id})`.as('comment_count'),
       })
@@ -393,6 +394,7 @@ export class DatabaseStorage implements IStorage {
           isAdmin: users.isAdmin,
           isAdminPlus: users.isAdminPlus,
           isOwner: users.isOwner,
+          level: users.level,
         },
         commentCount: sql<number>`(SELECT COUNT(*) FROM comments WHERE comments.bar_id = ${bars.id})`.as('comment_count'),
       })
@@ -427,6 +429,7 @@ export class DatabaseStorage implements IStorage {
           isAdmin: users.isAdmin,
           isAdminPlus: users.isAdminPlus,
           isOwner: users.isOwner,
+          level: users.level,
         },
         commentCount: sql<number>`(SELECT COUNT(*) FROM comments WHERE comments.bar_id = ${bars.id})`.as('comment_count'),
       })

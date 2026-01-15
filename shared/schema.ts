@@ -551,6 +551,7 @@ export type BarWithUser = Bar & {
     avatarUrl: string | null;
     membershipTier: string;
     isOwner?: boolean;
+    level?: number;
   };
   adoptionCount?: number;
   adoptedFromBarId?: string | null;
