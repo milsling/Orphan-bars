@@ -329,28 +329,110 @@ export default function Admin() {
   // Advanced achievement builder state
   const [useAdvancedMode, setUseAdvancedMode] = useState(false);
   const [ruleOperator, setRuleOperator] = useState<"AND" | "OR">("AND");
-  type RuleCondition = { id: string; metric: string; comparator: string; value: number; keyword?: string };
+  type RuleCondition = { 
+    id: string; 
+    metric: string; 
+    comparator: string; 
+    value: number; 
+    keyword?: string; 
+    negated?: boolean;
+    timeRangeStart?: number;
+    timeRangeEnd?: number;
+  };
   const [ruleConditions, setRuleConditions] = useState<RuleCondition[]>([
     { id: "1", metric: "bars_posted", comparator: ">=", value: 1 }
   ]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [suggestedRarity, setSuggestedRarity] = useState<string | null>(null);
+  
+  const timeBasedMetrics = ["early_bird", "night_owl"];
+  const defaultTimeRanges: Record<string, { start: number; end: number }> = {
+    early_bird: { start: 5, end: 9 },
+    night_owl: { start: 22, end: 4 },
+  };
   
   const addRuleCondition = () => {
-    setRuleConditions([...ruleConditions, { 
+    const newCondition: RuleCondition = { 
       id: Date.now().toString(), 
       metric: "bars_posted", 
       comparator: ">=", 
       value: 1 
-    }]);
+    };
+    const newConditions = [...ruleConditions, newCondition];
+    setRuleConditions(newConditions);
+    validateConditions(newConditions);
   };
   
   const removeRuleCondition = (id: string) => {
     if (ruleConditions.length > 1) {
-      setRuleConditions(ruleConditions.filter(c => c.id !== id));
+      const newConditions = ruleConditions.filter(c => c.id !== id);
+      setRuleConditions(newConditions);
+      validateConditions(newConditions);
     }
   };
   
   const updateRuleCondition = (id: string, updates: Partial<RuleCondition>) => {
-    setRuleConditions(ruleConditions.map(c => c.id === id ? { ...c, ...updates } : c));
+    const newConditions = ruleConditions.map(c => {
+      if (c.id !== id) return c;
+      const updated = { ...c, ...updates };
+      if (updates.metric && timeBasedMetrics.includes(updates.metric)) {
+        const defaults = defaultTimeRanges[updates.metric];
+        updated.timeRangeStart = defaults.start;
+        updated.timeRangeEnd = defaults.end;
+      } else if (updates.metric && !timeBasedMetrics.includes(updates.metric)) {
+        delete updated.timeRangeStart;
+        delete updated.timeRangeEnd;
+      }
+      return updated;
+    });
+    setRuleConditions(newConditions);
+    validateConditions(newConditions);
+  };
+  
+  const validateConditionsWithOperator = (conditions: RuleCondition[], operator: "AND" | "OR") => {
+    const warnings: string[] = [];
+    
+    for (let i = 0; i < conditions.length; i++) {
+      for (let j = i + 1; j < conditions.length; j++) {
+        const a = conditions[i];
+        const b = conditions[j];
+        if (a.metric === b.metric && a.comparator === b.comparator && a.value === b.value && 
+            a.keyword === b.keyword && a.negated === b.negated) {
+          warnings.push(`Duplicate condition detected: "${conditionOptions.find(o => o.value === a.metric)?.label || a.metric}"`);
+        }
+        if (a.metric === b.metric && a.comparator === b.comparator && a.value === b.value && 
+            a.keyword === b.keyword && a.negated !== b.negated && operator === "AND") {
+          warnings.push(`Logical conflict: condition AND NOT same condition will never be true`);
+        }
+      }
+    }
+    
+    setValidationWarnings(warnings);
+    
+    const orCount = operator === "OR" ? conditions.length - 1 : 0;
+    const andCount = operator === "AND" ? conditions.length - 1 : 0;
+    const maxThreshold = Math.max(...conditions.map(c => c.value));
+    const hasNegated = conditions.some(c => c.negated);
+    
+    let suggested: string;
+    if (orCount >= 3) {
+      suggested = "common";
+    } else if (orCount >= 1 && maxThreshold < 20) {
+      suggested = "uncommon";
+    } else if (andCount >= 2 && maxThreshold >= 50) {
+      suggested = "legendary";
+    } else if (andCount >= 1 && maxThreshold >= 25) {
+      suggested = "epic";
+    } else if (maxThreshold >= 10 || hasNegated) {
+      suggested = "rare";
+    } else {
+      suggested = "common";
+    }
+    setSuggestedRarity(suggested);
+  };
+  
+  const validateConditions = (conditions: RuleCondition[]) => {
+    validateConditionsWithOperator(conditions, ruleOperator);
   };
   
   const buildRuleTree = () => {
@@ -361,7 +443,11 @@ export default function Admin() {
         metric: c.metric,
         comparator: c.comparator,
         value: c.value,
-        ...(c.metric === "bars_with_keyword" && c.keyword ? { keyword: c.keyword } : {})
+        ...(c.metric === "bars_with_keyword" && c.keyword ? { keyword: c.keyword } : {}),
+        ...(c.negated ? { negated: true } : {}),
+        ...(timeBasedMetrics.includes(c.metric) && c.timeRangeStart !== undefined ? { 
+          timeRange: { start: c.timeRangeStart, end: c.timeRangeEnd || 0 } 
+        } : {})
       };
     }
     return {
@@ -372,26 +458,57 @@ export default function Admin() {
         metric: c.metric,
         comparator: c.comparator,
         value: c.value,
-        ...(c.metric === "bars_with_keyword" && c.keyword ? { keyword: c.keyword } : {})
+        ...(c.metric === "bars_with_keyword" && c.keyword ? { keyword: c.keyword } : {}),
+        ...(c.negated ? { negated: true } : {}),
+        ...(timeBasedMetrics.includes(c.metric) && c.timeRangeStart !== undefined ? { 
+          timeRange: { start: c.timeRangeStart, end: c.timeRangeEnd || 0 } 
+        } : {})
       }))
     };
   };
   
-  const generateRulePreview = () => {
-    const parts = ruleConditions.map(c => {
+  const generateRulePreview = (): React.ReactNode => {
+    const parts = ruleConditions.map((c, idx) => {
       const opt = conditionOptions.find(o => o.value === c.metric);
       const label = opt?.label || c.metric;
+      let conditionText = "";
       if (c.metric === "bars_with_keyword" && c.keyword) {
-        return `${label} "${c.keyword}" ${c.comparator} ${c.value}`;
+        conditionText = `${label} "${c.keyword}" ${c.comparator} ${c.value}`;
+      } else if (timeBasedMetrics.includes(c.metric) && c.timeRangeStart !== undefined) {
+        const formatHour = (h: number) => `${h % 12 || 12}${h < 12 ? 'AM' : 'PM'}`;
+        conditionText = `${label} (${formatHour(c.timeRangeStart)}-${formatHour(c.timeRangeEnd || 0)})`;
+      } else {
+        conditionText = `${label} ${c.comparator} ${c.value}`;
       }
-      return `${label} ${c.comparator} ${c.value}`;
+      
+      if (c.negated) {
+        conditionText = `NOT (${conditionText})`;
+      }
+      
+      return { text: conditionText, idx };
     });
-    return parts.join(` ${ruleOperator} `);
+    
+    return (
+      <span>
+        {parts.map((part, i) => (
+          <span key={part.idx}>
+            {part.text}
+            {i < parts.length - 1 && (
+              <span className={ruleOperator === "AND" ? "text-blue-400 font-semibold mx-1" : "text-orange-400 font-semibold mx-1"}>
+                {ruleOperator}
+              </span>
+            )}
+          </span>
+        ))}
+      </span>
+    );
   };
   
   const resetAdvancedMode = () => {
     setRuleConditions([{ id: "1", metric: "bars_posted", comparator: ">=", value: 1 }]);
     setRuleOperator("AND");
+    setValidationWarnings([]);
+    setSuggestedRarity(null);
   };
 
   const { data: customAchievements = [], isLoading: isLoadingAchievements } = useQuery<any[]>({
@@ -1677,89 +1794,155 @@ export default function Admin() {
                               type="button"
                               variant={ruleOperator === "AND" ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setRuleOperator("AND")}
+                              onClick={() => { setRuleOperator("AND"); validateConditionsWithOperator(ruleConditions, "AND"); }}
+                              className={ruleOperator === "AND" ? "bg-blue-600 hover:bg-blue-700" : ""}
                               data-testid="button-operator-and"
                             >
-                              AND (all must be true)
+                              <span className={ruleOperator === "AND" ? "" : "text-blue-400"}>AND</span>
+                              <span className="ml-1 text-xs opacity-70">(all must be true)</span>
                             </Button>
                             <Button
                               type="button"
                               variant={ruleOperator === "OR" ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setRuleOperator("OR")}
+                              onClick={() => { setRuleOperator("OR"); validateConditionsWithOperator(ruleConditions, "OR"); }}
+                              className={ruleOperator === "OR" ? "bg-orange-600 hover:bg-orange-700" : ""}
                               data-testid="button-operator-or"
                             >
-                              OR (any can be true)
+                              <span className={ruleOperator === "OR" ? "" : "text-orange-400"}>OR</span>
+                              <span className="ml-1 text-xs opacity-70">(any can be true)</span>
                             </Button>
                           </div>
                         </div>
 
                         <div className="space-y-3">
                           {ruleConditions.map((cond, idx) => (
-                            <div key={cond.id} className="flex items-start gap-2 p-3 border border-border rounded-lg bg-card">
-                              <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
-                                <Select
-                                  value={cond.metric}
-                                  onValueChange={(v) => updateRuleCondition(cond.id, { metric: v })}
-                                >
-                                  <SelectTrigger data-testid={`select-condition-metric-${idx}`}>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {conditionOptions.map(opt => (
-                                      <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                
-                                {cond.metric === "bars_with_keyword" && (
-                                  <Input
-                                    placeholder="Keyword (e.g., Christmas)"
-                                    value={cond.keyword || ""}
-                                    onChange={(e) => updateRuleCondition(cond.id, { keyword: e.target.value })}
-                                    data-testid={`input-condition-keyword-${idx}`}
+                            <div key={cond.id} className={`p-3 border rounded-lg bg-card ${cond.negated ? 'border-red-500/50 bg-red-500/5' : 'border-border'}`}>
+                              <div className="flex items-start gap-2">
+                                <div className="flex items-center gap-2 pt-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`not-${cond.id}`}
+                                    checked={cond.negated || false}
+                                    onChange={(e) => updateRuleCondition(cond.id, { negated: e.target.checked })}
+                                    className="h-4 w-4 rounded border-gray-300 text-red-500 focus:ring-red-500"
+                                    data-testid={`checkbox-not-${idx}`}
                                   />
+                                  <Label htmlFor={`not-${cond.id}`} className={`text-xs font-medium ${cond.negated ? 'text-red-400' : 'text-muted-foreground'}`}>
+                                    NOT
+                                  </Label>
+                                </div>
+                                
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                                  <Select
+                                    value={cond.metric}
+                                    onValueChange={(v) => updateRuleCondition(cond.id, { metric: v })}
+                                  >
+                                    <SelectTrigger data-testid={`select-condition-metric-${idx}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {conditionOptions.map(opt => (
+                                        <SelectItem key={opt.value} value={opt.value}>
+                                          {opt.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  
+                                  {cond.metric === "bars_with_keyword" && (
+                                    <Input
+                                      placeholder="Keyword (e.g., Christmas)"
+                                      value={cond.keyword || ""}
+                                      onChange={(e) => updateRuleCondition(cond.id, { keyword: e.target.value })}
+                                      data-testid={`input-condition-keyword-${idx}`}
+                                    />
+                                  )}
+                                  
+                                  {!timeBasedMetrics.includes(cond.metric) && (
+                                    <>
+                                      <Select
+                                        value={cond.comparator}
+                                        onValueChange={(v) => updateRuleCondition(cond.id, { comparator: v })}
+                                      >
+                                        <SelectTrigger data-testid={`select-condition-comparator-${idx}`}>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value=">=">at least (≥)</SelectItem>
+                                          <SelectItem value=">">more than (&gt;)</SelectItem>
+                                          <SelectItem value="=">exactly (=)</SelectItem>
+                                          <SelectItem value="<">less than (&lt;)</SelectItem>
+                                          <SelectItem value="<=">at most (≤)</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={cond.value}
+                                        onChange={(e) => updateRuleCondition(cond.id, { value: parseInt(e.target.value) || 0 })}
+                                        data-testid={`input-condition-value-${idx}`}
+                                      />
+                                    </>
+                                  )}
+                                  
+                                  {timeBasedMetrics.includes(cond.metric) && (
+                                    <div className="col-span-2 flex flex-col gap-1">
+                                      <div className="flex items-center gap-2">
+                                        <Select
+                                          value={String(cond.timeRangeStart ?? defaultTimeRanges[cond.metric]?.start ?? 0)}
+                                          onValueChange={(v) => updateRuleCondition(cond.id, { timeRangeStart: parseInt(v) })}
+                                        >
+                                          <SelectTrigger className="w-24" data-testid={`select-time-start-${idx}`}>
+                                            <SelectValue placeholder="Start" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {Array.from({ length: 24 }, (_, i) => (
+                                              <SelectItem key={i} value={String(i)}>
+                                                {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <span className="text-muted-foreground">to</span>
+                                        <Select
+                                          value={String(cond.timeRangeEnd ?? defaultTimeRanges[cond.metric]?.end ?? 0)}
+                                          onValueChange={(v) => updateRuleCondition(cond.id, { timeRangeEnd: parseInt(v) })}
+                                        >
+                                          <SelectTrigger className="w-24" data-testid={`select-time-end-${idx}`}>
+                                            <SelectValue placeholder="End" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {Array.from({ length: 24 }, (_, i) => (
+                                              <SelectItem key={i} value={String(i)}>
+                                                {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <span className="text-xs text-muted-foreground">(PST)</span>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">
+                                        Default: {cond.metric === 'early_bird' ? '5-9 AM' : '10 PM-4 AM'}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {ruleConditions.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeRuleCondition(cond.id)}
+                                    className="text-destructive hover:bg-destructive/10"
+                                    data-testid={`button-remove-condition-${idx}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 )}
-                                
-                                <Select
-                                  value={cond.comparator}
-                                  onValueChange={(v) => updateRuleCondition(cond.id, { comparator: v })}
-                                >
-                                  <SelectTrigger data-testid={`select-condition-comparator-${idx}`}>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value=">=">at least (≥)</SelectItem>
-                                    <SelectItem value=">">more than (&gt;)</SelectItem>
-                                    <SelectItem value="=">exactly (=)</SelectItem>
-                                    <SelectItem value="<">less than (&lt;)</SelectItem>
-                                    <SelectItem value="<=">at most (≤)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  value={cond.value}
-                                  onChange={(e) => updateRuleCondition(cond.id, { value: parseInt(e.target.value) || 0 })}
-                                  data-testid={`input-condition-value-${idx}`}
-                                />
                               </div>
-                              
-                              {ruleConditions.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeRuleCondition(cond.id)}
-                                  className="text-destructive hover:bg-destructive/10"
-                                  data-testid={`button-remove-condition-${idx}`}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -1777,17 +1960,42 @@ export default function Admin() {
                         </Button>
                         
                         {ruleConditions.length > 0 && (
-                          <div className="p-3 bg-muted/50 rounded-lg">
-                            <p className="text-sm font-medium mb-1">Preview:</p>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                            <p className="text-sm font-medium">Preview:</p>
+                            <p className="text-sm">
                               Unlock when: {generateRulePreview()}
                             </p>
+                            
+                            {validationWarnings.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {validationWarnings.map((warning, i) => (
+                                  <p key={i} className="text-sm text-orange-400 flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {warning}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="achievement-rarity-adv">Rarity</Label>
+                            <Label htmlFor="achievement-rarity-adv" className="flex items-center gap-2">
+                              Rarity
+                              {suggestedRarity && suggestedRarity !== newAchievementRarity && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-2 text-xs text-blue-400 hover:text-blue-300"
+                                  onClick={() => setNewAchievementRarity(suggestedRarity)}
+                                  data-testid="button-apply-suggested-rarity"
+                                >
+                                  Suggested: {suggestedRarity}
+                                </Button>
+                              )}
+                            </Label>
                             <Select value={newAchievementRarity} onValueChange={setNewAchievementRarity}>
                               <SelectTrigger id="achievement-rarity-adv" data-testid="select-achievement-rarity-adv">
                                 <SelectValue />

@@ -62,7 +62,15 @@ function evaluateNumeric(numericValue: number, comparator: string, value: number
 // Recursively evaluate a rule tree
 export function evaluateRuleTree(ruleTree: AchievementRuleTree, context: EvaluationContext): boolean {
   if (ruleTree.type === 'condition') {
-    return evaluateCondition(ruleTree as AchievementCondition, context);
+    const condition = ruleTree as AchievementCondition;
+    let result = evaluateCondition(condition, context);
+    
+    // Handle NOT logic - invert the result if negated
+    if (condition.negated) {
+      result = !result;
+    }
+    
+    return result;
   }
   
   const group = ruleTree as AchievementRuleGroup;

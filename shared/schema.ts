@@ -354,6 +354,8 @@ export type AchievementCondition = {
   comparator: ">=" | ">" | "=" | "<" | "<=";
   value: number;
   keyword?: string; // For bars_with_keyword metric
+  negated?: boolean; // For NOT logic - inverts the comparison
+  timeRange?: { start: number; end: number }; // For time-based metrics (hour in 24h format)
 };
 
 export type AchievementRuleGroup = {
