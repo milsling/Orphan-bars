@@ -2638,6 +2638,169 @@ export async function registerRoutes(
     }
   });
 
+  // Profile Badges Routes
+  
+  // Public: Get all active badges
+  app.get("/api/badges", async (_req, res) => {
+    try {
+      const badges = await storage.getProfileBadges(false);
+      res.json(badges);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get current user's badge collection
+  app.get("/api/badges/my-collection", isAuthenticated, async (req, res) => {
+    try {
+      const userBadges = await storage.getUserBadges(req.user!.id);
+      res.json(userBadges);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Set displayed badges for current user
+  app.patch("/api/badges/displayed", isAuthenticated, async (req, res) => {
+    try {
+      const { badgeIds } = req.body;
+      if (!Array.isArray(badgeIds)) {
+        return res.status(400).json({ message: "badgeIds must be an array" });
+      }
+      // Verify user owns all badges they want to display
+      const userBadges = await storage.getUserBadges(req.user!.id);
+      const ownedBadgeIds = new Set(userBadges.map(ub => ub.badgeId));
+      const invalidBadges = badgeIds.filter((id: string) => !ownedBadgeIds.has(id));
+      if (invalidBadges.length > 0) {
+        return res.status(400).json({ message: "You can only display badges you own" });
+      }
+      await storage.setDisplayedBadges(req.user!.id, badgeIds);
+      res.json({ success: true, displayedBadges: badgeIds });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get all badges (including inactive)
+  app.get("/api/admin/badges", isOwner, async (_req, res) => {
+    try {
+      const badges = await storage.getProfileBadges(true);
+      res.json(badges);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Create a new badge
+  app.post("/api/admin/badges", isOwner, async (req, res) => {
+    try {
+      const { name, displayName, description, imageUrl, emoji, color, backgroundColor, borderColor, animation, rarity, linkedAchievementId } = req.body;
+      if (!name || !displayName) {
+        return res.status(400).json({ message: "Name and display name are required" });
+      }
+      const badge = await storage.createProfileBadge({
+        name: name.trim().toLowerCase(),
+        displayName: displayName.trim(),
+        description: description || null,
+        imageUrl: imageUrl || null,
+        emoji: emoji || null,
+        color: color || null,
+        backgroundColor: backgroundColor || null,
+        borderColor: borderColor || null,
+        animation: animation || "none",
+        rarity: rarity || "common",
+        linkedAchievementId: linkedAchievementId || null,
+        createdBy: req.user!.id,
+      });
+      res.json(badge);
+    } catch (error: any) {
+      if (error.message?.includes("unique")) {
+        return res.status(400).json({ message: "A badge with this name already exists" });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Update a badge
+  app.patch("/api/admin/badges/:id", isOwner, async (req, res) => {
+    try {
+      const updates: any = {};
+      const fields = ['name', 'displayName', 'description', 'imageUrl', 'emoji', 'color', 'backgroundColor', 'borderColor', 'animation', 'rarity', 'isActive', 'linkedAchievementId'];
+      fields.forEach(field => {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      });
+      const badge = await storage.updateProfileBadge(req.params.id, updates);
+      if (!badge) {
+        return res.status(404).json({ message: "Badge not found" });
+      }
+      res.json(badge);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Delete a badge
+  app.delete("/api/admin/badges/:id", isOwner, async (req, res) => {
+    try {
+      await storage.deleteProfileBadge(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Grant badge to a user
+  app.post("/api/admin/badges/:badgeId/grant/:userId", isOwner, async (req, res) => {
+    try {
+      const { badgeId, userId } = req.params;
+      const badge = await storage.getProfileBadgeById(badgeId);
+      if (!badge) {
+        return res.status(404).json({ message: "Badge not found" });
+      }
+      const hasAlready = await storage.userHasBadge(userId, badgeId);
+      if (hasAlready) {
+        return res.status(400).json({ message: "User already has this badge" });
+      }
+      const userBadge = await storage.grantBadgeToUser(userId, badgeId, "owner_gift", req.user!.id);
+      res.json(userBadge);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Revoke badge from a user
+  app.delete("/api/admin/badges/:badgeId/revoke/:userId", isOwner, async (req, res) => {
+    try {
+      const { badgeId, userId } = req.params;
+      await storage.revokeBadgeFromUser(userId, badgeId);
+      // Also remove from displayed badges
+      const user = await storage.getUser(userId);
+      if (user?.displayedBadges?.includes(badgeId)) {
+        const newDisplayed = user.displayedBadges.filter(id => id !== badgeId);
+        await storage.setDisplayedBadges(userId, newDisplayed);
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin: Get users who have a specific badge
+  app.get("/api/admin/badges/:badgeId/users", isOwner, async (req, res) => {
+    try {
+      // For now, just return badge info - could expand to list users with this badge
+      const badge = await storage.getProfileBadgeById(req.params.badgeId);
+      if (!badge) {
+        return res.status(404).json({ message: "Badge not found" });
+      }
+      res.json(badge);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Admin archive routes (soft-deleted bars)
   app.get("/api/admin/archive", isAdmin, async (req, res) => {
     try {

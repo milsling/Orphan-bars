@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, debugLogs, achievementBadgeImages, customTags, customCategories, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement, type CustomTag, type InsertCustomTag, type CustomCategory, type InsertCustomCategory, type DebugLog, type InsertDebugLog, type AchievementRuleTree, type AchievementCondition, type AchievementRuleGroup, type AchievementConditionType } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, debugLogs, achievementBadgeImages, customTags, customCategories, profileBadges, userBadges, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement, type CustomTag, type InsertCustomTag, type CustomCategory, type InsertCustomCategory, type DebugLog, type InsertDebugLog, type AchievementRuleTree, type AchievementCondition, type AchievementRuleGroup, type AchievementConditionType, type ProfileBadge, type InsertProfileBadge, type UserBadge, type InsertUserBadge } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql, or, ilike, notInArray, ne } from "drizzle-orm";
 import { createHash } from "crypto";
@@ -2333,6 +2333,113 @@ export class DatabaseStorage implements IStorage {
       dailyXpComments: 0,
       dailyXpBookmarks: 0,
     });
+  }
+
+  // Profile Badges Methods
+  async createProfileBadge(data: Omit<InsertProfileBadge, 'id' | 'createdAt'>): Promise<ProfileBadge> {
+    const [badge] = await db.insert(profileBadges).values(data).returning();
+    return badge;
+  }
+
+  async getProfileBadges(includeInactive = false): Promise<ProfileBadge[]> {
+    if (includeInactive) {
+      return db.select().from(profileBadges).orderBy(desc(profileBadges.createdAt));
+    }
+    return db.select().from(profileBadges).where(eq(profileBadges.isActive, true)).orderBy(desc(profileBadges.createdAt));
+  }
+
+  async getProfileBadgeById(id: string): Promise<ProfileBadge | undefined> {
+    const [badge] = await db.select().from(profileBadges).where(eq(profileBadges.id, id));
+    return badge;
+  }
+
+  async updateProfileBadge(id: string, data: Partial<InsertProfileBadge>): Promise<ProfileBadge | undefined> {
+    const [updated] = await db.update(profileBadges).set(data).where(eq(profileBadges.id, id)).returning();
+    return updated;
+  }
+
+  async deleteProfileBadge(id: string): Promise<boolean> {
+    const result = await db.delete(profileBadges).where(eq(profileBadges.id, id));
+    return true;
+  }
+
+  // User Badges Methods
+  async grantBadgeToUser(userId: string, badgeId: string, source: string, grantedBy?: string, sourceDetails?: string): Promise<UserBadge> {
+    const [userBadge] = await db.insert(userBadges).values({
+      userId,
+      badgeId,
+      source,
+      grantedBy,
+      sourceDetails,
+    }).returning();
+    return userBadge;
+  }
+
+  async getUserBadges(userId: string): Promise<(UserBadge & { badge: ProfileBadge })[]> {
+    const results = await db
+      .select({
+        userBadge: userBadges,
+        badge: profileBadges,
+      })
+      .from(userBadges)
+      .innerJoin(profileBadges, eq(userBadges.badgeId, profileBadges.id))
+      .where(eq(userBadges.userId, userId))
+      .orderBy(desc(userBadges.grantedAt));
+    
+    return results.map(r => ({
+      ...r.userBadge,
+      badge: r.badge,
+    }));
+  }
+
+  async userHasBadge(userId: string, badgeId: string): Promise<boolean> {
+    const [exists] = await db
+      .select({ count: count() })
+      .from(userBadges)
+      .where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)));
+    return (exists?.count || 0) > 0;
+  }
+
+  async revokeBadgeFromUser(userId: string, badgeId: string): Promise<boolean> {
+    await db.delete(userBadges).where(and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)));
+    return true;
+  }
+
+  async setDisplayedBadges(userId: string, badgeIds: string[]): Promise<void> {
+    await db.update(users).set({ displayedBadges: badgeIds }).where(eq(users.id, userId));
+  }
+
+  async getDisplayedBadgesForUsers(userIds: string[]): Promise<Map<string, ProfileBadge[]>> {
+    if (userIds.length === 0) return new Map();
+    
+    const usersWithBadges = await db
+      .select({ id: users.id, displayedBadges: users.displayedBadges })
+      .from(users)
+      .where(sql`${users.id} = ANY(${userIds})`);
+    
+    const allBadgeIds = new Set<string>();
+    usersWithBadges.forEach(u => {
+      (u.displayedBadges || []).forEach(id => allBadgeIds.add(id));
+    });
+    
+    if (allBadgeIds.size === 0) return new Map();
+    
+    const badgesList = await db
+      .select()
+      .from(profileBadges)
+      .where(sql`${profileBadges.id} = ANY(${Array.from(allBadgeIds)})`);
+    
+    const badgesMap = new Map(badgesList.map(b => [b.id, b]));
+    
+    const result = new Map<string, ProfileBadge[]>();
+    usersWithBadges.forEach(u => {
+      const userBadges = (u.displayedBadges || [])
+        .map(id => badgesMap.get(id))
+        .filter((b): b is ProfileBadge => !!b);
+      result.set(u.id, userBadges);
+    });
+    
+    return result;
   }
 }
 
