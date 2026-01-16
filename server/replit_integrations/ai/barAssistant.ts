@@ -21,28 +21,74 @@ export interface BarSuggestion {
   tips: string;
 }
 
+// Hardcoded blocklist - these words should NEVER appear regardless of AI decision
+const BLOCKED_SLURS = [
+  "nigger", "niggers", "nigga", "niggas", "nigg3r", "n1gger", "n1gga",
+  "kike", "kikes", "k1ke",
+  "faggot", "faggots", "f4ggot", "fag", "fags",
+  "spic", "spics", "sp1c",
+  "wetback", "wetbacks",
+  "chink", "chinks", "ch1nk",
+  "gook", "gooks",
+  "towelhead", "towelheads",
+  "raghead", "ragheads",
+  "tranny", "trannies",
+  "retard", "retards", "ret4rd",
+];
+
+// Check for blocked slurs in content
+function containsBlockedSlurs(content: string): { blocked: boolean; matches: string[] } {
+  const normalizedContent = content.toLowerCase().replace(/[^\w\s]/g, '');
+  const matches: string[] = [];
+  
+  for (const slur of BLOCKED_SLURS) {
+    const regex = new RegExp(`\\b${slur}\\b`, 'i');
+    if (regex.test(normalizedContent) || normalizedContent.includes(slur)) {
+      matches.push(slur);
+    }
+  }
+  
+  return { blocked: matches.length > 0, matches };
+}
+
 export async function moderateContent(content: string): Promise<ModerationResult> {
+  // FIRST: Check hardcoded blocklist - instant block for worst slurs
+  const slurCheck = containsBlockedSlurs(content);
+  if (slurCheck.blocked) {
+    console.log("[MODERATION] Blocked by slur filter:", slurCheck.matches);
+    return {
+      approved: false,
+      flagged: true,
+      reasons: ["Content contains prohibited language that violates our community guidelines."],
+      plagiarismRisk: "none",
+    };
+  }
+
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are a content moderator for Orphan Bars, a platform for sharing rap lyrics and punchlines. 
-          
-Analyze the content for:
-1. Inappropriate content (extreme violence, hate speech, explicit threats)
-2. Plagiarism risk (if it sounds like famous lyrics from known songs)
-3. Spam or low-quality content
+          content: `You are a strict content moderator for Orphan Bars, a platform for sharing rap lyrics and punchlines. 
 
-Hip-hop culture allows: wordplay, metaphors, braggadocio, battle rap style disses, slang, and creative expression.
-Do NOT flag content just because it's edgy, uses slang, or contains mild profanity - that's normal for rap.
+MUST REJECT content containing:
+1. Racial slurs or hate speech targeting any group (race, religion, sexuality, gender, disability)
+2. Nazi references, white supremacist content, or calls for violence against groups
+3. Explicit threats of violence or harm
+4. Pedophilia references or child exploitation
+5. Direct harassment or doxxing
+
+Hip-hop culture allows: wordplay, metaphors, braggadocio, battle rap style disses, slang, mild profanity, and creative expression.
+Battle rap disses about skills/talent are fine. Edgy content is fine. But hate speech is NOT artistic expression.
+
+Be STRICT about hate speech. When in doubt, reject.
 
 Respond in JSON format:
 {
   "approved": boolean,
   "flagged": boolean,
-  "reasons": string[] (only if flagged),
+  "reasons": string[] (only if not approved or flagged),
   "plagiarismRisk": "none" | "low" | "medium" | "high",
   "plagiarismDetails": string (only if plagiarism detected - name the song/artist if known)
 }`
@@ -57,19 +103,21 @@ Respond in JSON format:
     });
 
     const result = JSON.parse(response.choices[0]?.message?.content || "{}");
+    console.log("[MODERATION] AI result:", result);
     return {
-      approved: result.approved !== false,
+      approved: result.approved === true,
       flagged: result.flagged === true,
       reasons: result.reasons || [],
       plagiarismRisk: result.plagiarismRisk || "none",
       plagiarismDetails: result.plagiarismDetails,
     };
   } catch (error) {
-    console.error("Moderation error:", error);
+    // CRITICAL: If AI moderation fails, DO NOT approve content - require manual review
+    console.error("[MODERATION] AI error - defaulting to REJECT:", error);
     return {
-      approved: true,
-      flagged: false,
-      reasons: [],
+      approved: false,
+      flagged: true,
+      reasons: ["Content could not be verified by our moderation system. Please try again or submit for manual review."],
       plagiarismRisk: "none",
     };
   }
