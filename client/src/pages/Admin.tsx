@@ -54,6 +54,23 @@ export default function Admin() {
   const [tagBgColor, setTagBgColor] = useState("");
   const [tagImageUrl, setTagImageUrl] = useState("");
 
+  // Profile Badges state
+  const [showBadgeDialog, setShowBadgeDialog] = useState(false);
+  const [editingBadge, setEditingBadge] = useState<any>(null);
+  const [badgeName, setBadgeName] = useState("");
+  const [badgeDisplayName, setBadgeDisplayName] = useState("");
+  const [badgeDescription, setBadgeDescription] = useState("");
+  const [badgeEmoji, setBadgeEmoji] = useState("");
+  const [badgeImageUrl, setBadgeImageUrl] = useState("");
+  const [badgeAnimation, setBadgeAnimation] = useState("none");
+  const [badgeRarity, setBadgeRarity] = useState("common");
+  const [badgeColor, setBadgeColor] = useState("");
+  const [badgeBgColor, setBadgeBgColor] = useState("");
+  const [badgeBorderColor, setBadgeBorderColor] = useState("");
+  const [showGrantBadgeDialog, setShowGrantBadgeDialog] = useState(false);
+  const [grantBadgeId, setGrantBadgeId] = useState("");
+  const [grantUsername, setGrantUsername] = useState("");
+
   const { data: allUsers = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ['admin', 'users'],
     queryFn: () => api.getAllUsers(),
@@ -947,6 +964,171 @@ export default function Admin() {
     { value: "bounce", label: "Bounce", preview: "hover:animate-bounce" },
     { value: "sparkle", label: "Sparkle", preview: "animate-pulse" },
     { value: "gradient", label: "Gradient", preview: "bg-gradient-to-r from-purple-500 to-pink-500" },
+  ];
+
+  // Profile Badges query and mutations (owner only)
+  const { data: profileBadges = [], isLoading: isLoadingBadges } = useQuery<any[]>({
+    queryKey: ['admin', 'badges'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/badges', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch badges');
+      return res.json();
+    },
+    enabled: !!currentUser?.isOwner,
+  });
+
+  const createBadgeMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch('/api/admin/badges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to create badge');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'badges'] });
+      setShowBadgeDialog(false);
+      resetBadgeForm();
+      toast({ title: "Profile badge created" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateBadgeMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string } & any) => {
+      const res = await fetch(`/api/admin/badges/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update badge');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'badges'] });
+      setShowBadgeDialog(false);
+      setEditingBadge(null);
+      resetBadgeForm();
+      toast({ title: "Badge updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteBadgeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/admin/badges/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete badge');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'badges'] });
+      toast({ title: "Badge deleted" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const grantBadgeMutation = useMutation({
+    mutationFn: async ({ badgeId, userId }: { badgeId: string; userId: string }) => {
+      const res = await fetch(`/api/admin/badges/${badgeId}/grant/${userId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to grant badge');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setShowGrantBadgeDialog(false);
+      setGrantBadgeId("");
+      setGrantUsername("");
+      toast({ title: "Badge granted to user" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetBadgeForm = () => {
+    setBadgeName("");
+    setBadgeDisplayName("");
+    setBadgeDescription("");
+    setBadgeEmoji("");
+    setBadgeImageUrl("");
+    setBadgeAnimation("none");
+    setBadgeRarity("common");
+    setBadgeColor("");
+    setBadgeBgColor("");
+    setBadgeBorderColor("");
+    setEditingBadge(null);
+  };
+
+  const openEditBadgeDialog = (badge: any) => {
+    setEditingBadge(badge);
+    setBadgeName(badge.name);
+    setBadgeDisplayName(badge.displayName || "");
+    setBadgeDescription(badge.description || "");
+    setBadgeEmoji(badge.emoji || "");
+    setBadgeImageUrl(badge.imageUrl || "");
+    setBadgeAnimation(badge.animation || "none");
+    setBadgeRarity(badge.rarity || "common");
+    setBadgeColor(badge.color || "");
+    setBadgeBgColor(badge.backgroundColor || "");
+    setBadgeBorderColor(badge.borderColor || "");
+    setShowBadgeDialog(true);
+  };
+
+  const handleSaveBadge = () => {
+    const data = {
+      name: badgeName,
+      displayName: badgeDisplayName,
+      description: badgeDescription || null,
+      emoji: badgeEmoji || null,
+      imageUrl: badgeImageUrl || null,
+      animation: badgeAnimation,
+      rarity: badgeRarity,
+      color: badgeColor || null,
+      backgroundColor: badgeBgColor || null,
+      borderColor: badgeBorderColor || null,
+    };
+    if (editingBadge) {
+      updateBadgeMutation.mutate({ id: editingBadge.id, ...data });
+    } else {
+      createBadgeMutation.mutate(data);
+    }
+  };
+
+  const handleGrantBadge = () => {
+    const user = allUsers.find(u => u.username.toLowerCase() === grantUsername.toLowerCase());
+    if (!user) {
+      toast({ title: "Error", description: "User not found", variant: "destructive" });
+      return;
+    }
+    grantBadgeMutation.mutate({ badgeId: grantBadgeId, userId: user.id });
+  };
+
+  const badgeRarityOptions = [
+    { value: "common", label: "Common", color: "text-gray-400" },
+    { value: "rare", label: "Rare", color: "text-blue-400" },
+    { value: "epic", label: "Epic", color: "text-purple-400" },
+    { value: "legendary", label: "Legendary", color: "text-yellow-400" },
   ];
 
   const conditionOptions = [
@@ -2869,6 +3051,396 @@ export default function Admin() {
             </TabsContent>
           )}
 
+          {/* Profile Badges Tab (Owner Only) */}
+          {currentUser?.isOwner && (
+            <TabsContent value="profile-badges">
+              <Card className="border-border bg-card/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Star className="h-5 w-5 text-pink-500" />
+                      Profile Badges
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setShowGrantBadgeDialog(true)}
+                        variant="outline"
+                        size="sm"
+                        data-testid="button-grant-badge"
+                        disabled={profileBadges.length === 0}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Grant Badge
+                      </Button>
+                      <Button
+                        onClick={() => { resetBadgeForm(); setShowBadgeDialog(true); }}
+                        size="sm"
+                        data-testid="button-create-badge"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Create Badge
+                      </Button>
+                    </div>
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Profile badges appear next to usernames across the platform. Users can choose which badge to display from their collection.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingBadges ? (
+                    <p className="text-muted-foreground">Loading badges...</p>
+                  ) : profileBadges.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Star className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                      <p className="text-muted-foreground">No profile badges created yet.</p>
+                      <p className="text-sm text-muted-foreground/70">Create badges that users can earn or be gifted.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {profileBadges.map((badge: any) => (
+                        <div key={badge.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card/30 hover:bg-card/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            {badge.imageUrl ? (
+                              <img src={badge.imageUrl} alt={badge.displayName} className="h-10 w-10 object-contain rounded" />
+                            ) : badge.emoji ? (
+                              <span className="text-2xl">{badge.emoji}</span>
+                            ) : (
+                              <Star className="h-6 w-6 text-muted-foreground" />
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{badge.displayName}</span>
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs ${badgeRarityOptions.find(r => r.value === badge.rarity)?.color || 'text-gray-400'}`}
+                                >
+                                  {badge.rarity}
+                                </Badge>
+                                {!badge.isActive && (
+                                  <Badge variant="secondary" className="text-xs">Inactive</Badge>
+                                )}
+                              </div>
+                              {badge.description && (
+                                <p className="text-sm text-muted-foreground">{badge.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditBadgeDialog(badge)}
+                              data-testid={`button-edit-badge-${badge.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive" data-testid={`button-delete-badge-${badge.id}`}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Badge?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete "{badge.displayName}" and remove it from all users who have it.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteBadgeMutation.mutate(badge.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Badge Create/Edit Dialog */}
+              <Dialog open={showBadgeDialog} onOpenChange={(open) => { setShowBadgeDialog(open); if (!open) resetBadgeForm(); }}>
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingBadge ? "Edit Badge" : "Create New Badge"}</DialogTitle>
+                    <DialogDescription>
+                      {editingBadge ? "Update the badge settings below." : "Create a profile badge users can collect and display."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="badge-name">Badge ID *</Label>
+                        <Input
+                          id="badge-name"
+                          value={badgeName}
+                          onChange={(e) => setBadgeName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                          placeholder="og_supporter"
+                          disabled={!!editingBadge}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="badge-display">Display Name *</Label>
+                        <Input
+                          id="badge-display"
+                          value={badgeDisplayName}
+                          onChange={(e) => setBadgeDisplayName(e.target.value)}
+                          placeholder="OG Supporter"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="badge-desc">Description</Label>
+                      <Input
+                        id="badge-desc"
+                        value={badgeDescription}
+                        onChange={(e) => setBadgeDescription(e.target.value)}
+                        placeholder="Early supporter of the platform"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="badge-emoji">Emoji</Label>
+                        <Input
+                          id="badge-emoji"
+                          value={badgeEmoji}
+                          onChange={(e) => setBadgeEmoji(e.target.value)}
+                          placeholder="🎖️"
+                          maxLength={2}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="badge-rarity">Rarity</Label>
+                        <select
+                          id="badge-rarity"
+                          value={badgeRarity}
+                          onChange={(e) => setBadgeRarity(e.target.value)}
+                          className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                        >
+                          {badgeRarityOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="badge-animation">Animation</Label>
+                      <select
+                        id="badge-animation"
+                        value={badgeAnimation}
+                        onChange={(e) => setBadgeAnimation(e.target.value)}
+                        className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                      >
+                        {tagAnimationOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Text Color</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={badgeColor}
+                            onChange={(e) => setBadgeColor(e.target.value)}
+                            placeholder="#fff"
+                            className="flex-1"
+                          />
+                          <input 
+                            type="color" 
+                            value={badgeColor || "#ffffff"} 
+                            onChange={(e) => setBadgeColor(e.target.value)}
+                            className="w-10 h-10 rounded border cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Background</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={badgeBgColor}
+                            onChange={(e) => setBadgeBgColor(e.target.value)}
+                            placeholder="#6b21a8"
+                            className="flex-1"
+                          />
+                          <input 
+                            type="color" 
+                            value={badgeBgColor || "#6b21a8"} 
+                            onChange={(e) => setBadgeBgColor(e.target.value)}
+                            className="w-10 h-10 rounded border cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Border</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={badgeBorderColor}
+                            onChange={(e) => setBadgeBorderColor(e.target.value)}
+                            placeholder="#a855f7"
+                            className="flex-1"
+                          />
+                          <input 
+                            type="color" 
+                            value={badgeBorderColor || "#a855f7"} 
+                            onChange={(e) => setBadgeBorderColor(e.target.value)}
+                            className="w-10 h-10 rounded border cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Badge Image (optional)</Label>
+                      <div className="flex items-center gap-3">
+                        {badgeImageUrl ? (
+                          <div className="flex items-center gap-2">
+                            <img src={badgeImageUrl} alt="Badge preview" className="h-10 w-10 object-contain rounded border" />
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setBadgeImageUrl("")}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Remove
+                            </Button>
+                          </div>
+                        ) : (
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={2097152}
+                            onGetUploadParameters={async (file) => {
+                              const res = await fetch('/api/uploads/presigned-url', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                  filename: file.name,
+                                  contentType: file.type,
+                                  directory: 'badge-images',
+                                }),
+                              });
+                              const data = await res.json();
+                              return {
+                                method: 'PUT' as const,
+                                url: data.uploadUrl,
+                                headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                              };
+                            }}
+                            onComplete={(result) => {
+                              if (result.successful && result.successful.length > 0) {
+                                const file = result.successful[0];
+                                const publicUrl = (file.response?.body as any)?.publicUrl || file.uploadURL?.split('?')[0];
+                                if (publicUrl) {
+                                  setBadgeImageUrl(publicUrl);
+                                }
+                              }
+                            }}
+                            buttonClassName="w-full"
+                          >
+                            <Image className="h-4 w-4 mr-2" />
+                            Upload Badge Image
+                          </ObjectUploader>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="border rounded-lg p-4 bg-secondary/20">
+                      <Label className="text-xs text-muted-foreground mb-2 block">Preview</Label>
+                      <div className="flex items-center gap-2">
+                        {badgeImageUrl ? (
+                          <img src={badgeImageUrl} alt="Badge preview" className="h-6 w-6 object-cover rounded" />
+                        ) : (
+                          <Badge 
+                            variant="secondary"
+                            className={`${badgeAnimation === 'pulse' ? 'animate-pulse' : ''} ${badgeAnimation === 'glow' ? 'shadow-lg shadow-primary/50' : ''}`}
+                            style={{ 
+                              color: badgeColor || undefined, 
+                              backgroundColor: badgeBgColor || undefined,
+                              borderColor: badgeBorderColor || undefined,
+                              borderWidth: badgeBorderColor ? '2px' : undefined,
+                            }}
+                          >
+                            {badgeEmoji && <span className="mr-1">{badgeEmoji}</span>}
+                            {badgeDisplayName || "Badge Name"}
+                          </Badge>
+                        )}
+                        <span className="text-sm text-muted-foreground">@username</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setShowBadgeDialog(false); resetBadgeForm(); }}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveBadge} disabled={!badgeName.trim() || !badgeDisplayName.trim() || createBadgeMutation.isPending || updateBadgeMutation.isPending}>
+                      {editingBadge ? "Update Badge" : "Create Badge"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Grant Badge Dialog */}
+              <Dialog open={showGrantBadgeDialog} onOpenChange={setShowGrantBadgeDialog}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Grant Badge to User</DialogTitle>
+                    <DialogDescription>
+                      Give a badge to a specific user. They'll be able to display it on their profile.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="grant-badge">Select Badge</Label>
+                      <select
+                        id="grant-badge"
+                        value={grantBadgeId}
+                        onChange={(e) => setGrantBadgeId(e.target.value)}
+                        className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="">-- Choose a badge --</option>
+                        {profileBadges.filter((b: any) => b.isActive).map((badge: any) => (
+                          <option key={badge.id} value={badge.id}>{badge.displayName}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="grant-username">Username</Label>
+                      <Input
+                        id="grant-username"
+                        value={grantUsername}
+                        onChange={(e) => setGrantUsername(e.target.value)}
+                        placeholder="Enter username"
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setShowGrantBadgeDialog(false); setGrantBadgeId(""); setGrantUsername(""); }}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleGrantBadge} disabled={!grantBadgeId || !grantUsername.trim() || grantBadgeMutation.isPending}>
+                      Grant Badge
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </TabsContent>
+          )}
+
           {/* Debug Logs Tab (Owner Only) */}
           {currentUser?.isOwner && (
             <TabsContent value="debug">
@@ -3073,6 +3645,15 @@ export default function Admin() {
                     >
                       <Trophy className="h-5 w-5 text-purple-500" />
                       <span>Achievements</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2 h-auto py-3"
+                      onClick={() => setActiveTab("profile-badges")}
+                      data-testid="button-goto-profile-badges"
+                    >
+                      <Star className="h-5 w-5 text-pink-500" />
+                      <span>Profile Badges</span>
                     </Button>
                   </div>
 
