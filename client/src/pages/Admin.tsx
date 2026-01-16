@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -946,13 +946,16 @@ export default function Admin() {
     }
   };
 
-  if (!currentUser) {
-    setLocation("/auth");
-    return null;
-  }
+  // Redirect non-admin users
+  useEffect(() => {
+    if (!currentUser) {
+      setLocation("/auth");
+    } else if (!currentUser.isAdmin) {
+      setLocation("/");
+    }
+  }, [currentUser, setLocation]);
 
-  if (!currentUser.isAdmin) {
-    setLocation("/");
+  if (!currentUser || !currentUser.isAdmin) {
     return null;
   }
 
