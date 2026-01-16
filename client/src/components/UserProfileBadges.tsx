@@ -45,15 +45,15 @@ export function UserProfileBadges({
   if (displayBadges.length === 0) return null;
 
   const sizeClasses = {
-    xs: "text-[10px] px-1 py-0 h-4",
-    sm: "text-xs px-1.5 py-0.5 h-5",
-    md: "text-sm px-2 py-1 h-6",
+    xs: "text-[10px] px-1.5 py-0.5 h-4",
+    sm: "text-xs px-2 py-0.5 h-5",
+    md: "text-sm px-2.5 py-1 h-6",
   };
 
-  const emojiSizes = {
-    xs: "text-[10px]",
-    sm: "text-xs",
-    md: "text-sm",
+  const textSizes = {
+    xs: "text-[9px]",
+    sm: "text-[10px]",
+    md: "text-xs",
   };
 
   const imgSizes = {
@@ -63,22 +63,23 @@ export function UserProfileBadges({
   };
 
   return (
-    <div className={cn("inline-flex items-center gap-0.5 flex-wrap", className)}>
+    <div className={cn("inline-flex items-center gap-1 flex-wrap", className)}>
       {displayBadges.map((badge) => (
         <TooltipProvider key={badge.id}>
           <Tooltip>
             <TooltipTrigger asChild>
               <span
                 className={cn(
-                  "inline-flex items-center justify-center rounded gap-0.5 transition-all cursor-default",
+                  "inline-flex items-center justify-center rounded gap-0.5 transition-all cursor-default font-medium",
                   sizeClasses[size],
                   badge.animation === "pulse" && "animate-pulse",
                   badge.animation === "glow" && "shadow-sm shadow-primary/50",
+                  badge.animation === "bounce" && "hover:animate-bounce",
                   badge.animation === "shimmer" && "relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:animate-[shimmer_2s_infinite]"
                 )}
                 style={{
-                  color: badge.color || undefined,
-                  backgroundColor: badge.backgroundColor || "rgba(var(--muted), 0.3)",
+                  color: badge.color || "#fff",
+                  backgroundColor: badge.backgroundColor || "hsl(var(--primary))",
                   borderColor: badge.borderColor || undefined,
                   borderWidth: badge.borderColor ? "1px" : undefined,
                   borderStyle: badge.borderColor ? "solid" : undefined,
@@ -91,10 +92,10 @@ export function UserProfileBadges({
                     alt={badge.displayName}
                     className={cn("object-contain", imgSizes[size])}
                   />
-                ) : badge.emoji ? (
-                  <span className={emojiSizes[size]}>{badge.emoji}</span>
                 ) : (
-                  <span className={cn("font-medium", emojiSizes[size])}>{badge.displayName}</span>
+                  <span className={cn("font-semibold uppercase tracking-wide", textSizes[size])}>
+                    {badge.displayName}
+                  </span>
                 )}
               </span>
             </TooltipTrigger>
@@ -109,7 +110,7 @@ export function UserProfileBadges({
         </TooltipProvider>
       ))}
       {badges.length > maxBadges && (
-        <span className={cn("text-muted-foreground", emojiSizes[size])}>
+        <span className={cn("text-muted-foreground", textSizes[size])}>
           +{badges.length - maxBadges}
         </span>
       )}

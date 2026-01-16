@@ -2429,12 +2429,112 @@ export class DatabaseStorage implements IStorage {
     
     if (allBadgeIds.size === 0) return new Map();
     
-    const badgesList = await db
-      .select()
-      .from(profileBadges)
-      .where(sql`${profileBadges.id} = ANY(${Array.from(allBadgeIds)})`);
+    // Separate achievement badge IDs from profile badge IDs
+    const achievementKeys = Object.keys(ACHIEVEMENTS);
+    const achievementBadgeIds: string[] = [];
+    const profileBadgeIds: string[] = [];
     
-    const badgesMap = new Map(badgesList.map(b => [b.id, b]));
+    allBadgeIds.forEach(id => {
+      // Check if it's an achievement ID (includes custom_ prefix for custom achievements)
+      if (achievementKeys.includes(id) || id.startsWith('custom_')) {
+        achievementBadgeIds.push(id);
+      } else {
+        profileBadgeIds.push(id);
+      }
+    });
+    
+    // Fetch profile badges from database
+    const badgesMap = new Map<string, ProfileBadge>();
+    
+    if (profileBadgeIds.length > 0) {
+      const badgesList = await db
+        .select()
+        .from(profileBadges)
+        .where(sql`${profileBadges.id} = ANY(${profileBadgeIds})`);
+      badgesList.forEach(b => badgesMap.set(b.id, b));
+    }
+    
+    // Fetch custom images for achievement badges
+    const achievementImages = new Map<string, string>();
+    if (achievementBadgeIds.length > 0) {
+      const images = await db
+        .select()
+        .from(achievementBadgeImages)
+        .where(sql`${achievementBadgeImages.id} = ANY(${achievementBadgeIds})`);
+      images.forEach(img => achievementImages.set(img.id, img.imageUrl));
+    }
+    
+    // Also fetch custom achievements for custom_ prefixed IDs
+    const customAchievementIds = achievementBadgeIds
+      .filter(id => id.startsWith('custom_'))
+      .map(id => id.replace('custom_', ''));
+    
+    const customAchievementsMap = new Map<string, { name: string; emoji: string | null; imageUrl: string | null; description: string | null; rarity: string }>();
+    if (customAchievementIds.length > 0) {
+      const customAchievementsList = await db
+        .select()
+        .from(customAchievements)
+        .where(sql`${customAchievements.id} = ANY(${customAchievementIds})`);
+      customAchievementsList.forEach(ca => {
+        customAchievementsMap.set(`custom_${ca.id}`, {
+          name: ca.name,
+          emoji: ca.emoji,
+          imageUrl: ca.imageUrl,
+          description: ca.description,
+          rarity: ca.rarity || 'common',
+        });
+      });
+    }
+    
+    // Convert achievement badges to ProfileBadge format
+    achievementBadgeIds.forEach(id => {
+      if (id.startsWith('custom_')) {
+        // Custom achievement
+        const customAch = customAchievementsMap.get(id);
+        if (customAch) {
+          badgesMap.set(id, {
+            id,
+            name: id,
+            displayName: customAch.name,
+            description: customAch.description,
+            imageUrl: customAch.imageUrl,
+            emoji: customAch.emoji,
+            color: null,
+            backgroundColor: null,
+            borderColor: null,
+            animation: 'none',
+            rarity: customAch.rarity as any,
+            linkedAchievementId: null,
+            isActive: true,
+            createdBy: null,
+            createdAt: new Date(),
+          });
+        }
+      } else {
+        // Built-in achievement
+        const achievement = ACHIEVEMENTS[id as keyof typeof ACHIEVEMENTS];
+        if (achievement) {
+          const customImage = achievementImages.get(id);
+          badgesMap.set(id, {
+            id,
+            name: id,
+            displayName: achievement.name,
+            description: achievement.description,
+            imageUrl: customImage || achievement.imageUrl,
+            emoji: achievement.emoji,
+            color: null,
+            backgroundColor: null,
+            borderColor: null,
+            animation: 'none',
+            rarity: achievement.rarity,
+            linkedAchievementId: null,
+            isActive: true,
+            createdBy: null,
+            createdAt: new Date(),
+          });
+        }
+      }
+    });
     
     const result = new Map<string, ProfileBadge[]>();
     usersWithBadges.forEach(u => {
