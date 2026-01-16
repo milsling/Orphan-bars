@@ -2631,15 +2631,15 @@ export default function Admin() {
           {currentUser?.isOwner && (
             <TabsContent value="debug">
               <Card className="border-border bg-card/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                <CardHeader className="space-y-3">
+                  <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5 text-yellow-500" />
                       Debug Logs
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Select value={debugFilter} onValueChange={setDebugFilter}>
-                        <SelectTrigger className="w-32" data-testid="select-debug-filter">
+                        <SelectTrigger className="w-28 sm:w-32" data-testid="select-debug-filter">
                           <SelectValue placeholder="Filter" />
                         </SelectTrigger>
                         <SelectContent>
