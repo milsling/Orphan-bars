@@ -1,4 +1,4 @@
-import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, debugLogs, achievementBadgeImages, customTags, customCategories, profileBadges, userBadges, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement, type CustomTag, type InsertCustomTag, type CustomCategory, type InsertCustomCategory, type DebugLog, type InsertDebugLog, type AchievementRuleTree, type AchievementCondition, type AchievementRuleGroup, type AchievementConditionType, type ProfileBadge, type InsertProfileBadge, type UserBadge, type InsertUserBadge } from "@shared/schema";
+import { users, bars, verificationCodes, passwordResetCodes, likes, comments, commentLikes, dislikes, commentDislikes, follows, notifications, bookmarks, pushSubscriptions, friendships, directMessages, adoptions, barSequence, userAchievements, reports, flaggedPhrases, maintenanceStatus, barUsages, customAchievements, debugLogs, achievementBadgeImages, customTags, customCategories, profileBadges, userBadges, protectedBars, ACHIEVEMENTS, type User, type InsertUser, type Bar, type InsertBar, type Like, type Comment, type CommentLike, type InsertComment, type Notification, type Bookmark, type PushSubscription, type Friendship, type DirectMessage, type Adoption, type BarUsage, type UserAchievement, type AchievementId, type Report, type FlaggedPhrase, type MaintenanceStatus, type CustomAchievement, type InsertCustomAchievement, type CustomTag, type InsertCustomTag, type CustomCategory, type InsertCustomCategory, type DebugLog, type InsertDebugLog, type AchievementRuleTree, type AchievementCondition, type AchievementRuleGroup, type AchievementConditionType, type ProfileBadge, type InsertProfileBadge, type UserBadge, type InsertUserBadge, type ProtectedBar, type InsertProtectedBar } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gt, count, sql, or, ilike, notInArray, ne } from "drizzle-orm";
 import { createHash } from "crypto";
@@ -2545,6 +2545,53 @@ export class DatabaseStorage implements IStorage {
     });
     
     return result;
+  }
+
+  // Protected Bars methods
+  async getProtectedBars(): Promise<ProtectedBar[]> {
+    return db.select().from(protectedBars).orderBy(desc(protectedBars.createdAt));
+  }
+
+  async createProtectedBar(data: InsertProtectedBar): Promise<ProtectedBar> {
+    const [result] = await db.insert(protectedBars).values(data).returning();
+    return result;
+  }
+
+  async deleteProtectedBar(id: string): Promise<boolean> {
+    const result = await db.delete(protectedBars).where(eq(protectedBars.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async checkContentAgainstProtectedBars(content: string): Promise<ProtectedBar | null> {
+    // Normalize content for comparison (lowercase, trim, remove extra whitespace)
+    const normalizedContent = content.toLowerCase().trim().replace(/\s+/g, ' ');
+    
+    const allProtected = await db.select().from(protectedBars);
+    
+    for (const protectedBar of allProtected) {
+      const normalizedProtected = protectedBar.content.toLowerCase().trim().replace(/\s+/g, ' ');
+      
+      // Check for exact match or if the new content contains the protected content
+      if (normalizedContent === normalizedProtected || 
+          normalizedContent.includes(normalizedProtected) ||
+          normalizedProtected.includes(normalizedContent)) {
+        return protectedBar;
+      }
+      
+      // Also check similarity - if 80% of words match, consider it a match
+      const contentWords = normalizedContent.split(' ').filter(w => w.length > 2);
+      const protectedWords = normalizedProtected.split(' ').filter(w => w.length > 2);
+      
+      if (protectedWords.length > 3) {
+        const matchingWords = contentWords.filter(w => protectedWords.includes(w));
+        const similarity = matchingWords.length / protectedWords.length;
+        if (similarity >= 0.8) {
+          return protectedBar;
+        }
+      }
+    }
+    
+    return null;
   }
 }
 

@@ -647,3 +647,24 @@ export const maintenanceStatus = pgTable("maintenance_status", {
 });
 
 export type MaintenanceStatus = typeof maintenanceStatus.$inferSelect;
+
+// Protected Bars - Owner's secret backlog that prevents others from posting matching content
+export const protectedBars = pgTable("protected_bars", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  content: text("content").notNull(), // The protected bar content
+  notes: text("notes"), // Owner's private notes about this bar
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+});
+
+export const protectedBarsRelations = relations(protectedBars, ({ one }) => ({
+  creator: one(users, { fields: [protectedBars.createdBy], references: [users.id] }),
+}));
+
+export type ProtectedBar = typeof protectedBars.$inferSelect;
+export type InsertProtectedBar = typeof protectedBars.$inferInsert;
+
+export const insertProtectedBarSchema = createInsertSchema(protectedBars).omit({
+  id: true,
+  createdAt: true,
+});
