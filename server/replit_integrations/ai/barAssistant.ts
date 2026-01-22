@@ -209,6 +209,78 @@ Respond in JSON format:
   }
 }
 
+export interface StyleAnalysis {
+  primaryStyle: string;
+  secondaryStyles: string[];
+  strengths: string[];
+  characteristics: string[];
+  comparison: string;
+  summary: string;
+}
+
+export async function analyzeUserStyle(bars: string[], username: string): Promise<StyleAnalysis> {
+  if (bars.length === 0) {
+    return {
+      primaryStyle: "Unknown",
+      secondaryStyles: [],
+      strengths: [],
+      characteristics: ["No bars to analyze yet"],
+      comparison: "",
+      summary: `${username} hasn't posted any bars yet. Check back after they drop some heat!`,
+    };
+  }
+
+  try {
+    const barsText = bars.slice(0, 20).map((bar, i) => `${i + 1}. "${bar}"`).join("\n");
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert hip-hop analyst who studies lyrical styles. Analyze the user's bars to determine their unique writing style.
+
+Respond in JSON format:
+{
+  "primaryStyle": "One word or short phrase describing their main style (e.g., 'Wordsmith', 'Storyteller', 'Battle Rapper', 'Conscious', 'Punchline King', 'Metaphor Master', 'Comedian', 'Street Poet')",
+  "secondaryStyles": ["2-3 additional style elements"],
+  "strengths": ["3-4 specific lyrical strengths you noticed"],
+  "characteristics": ["4-5 distinctive characteristics of their writing"],
+  "comparison": "Compare their style to 1-2 well-known rappers (e.g., 'Reminiscent of Lil Wayne's wordplay with Kendrick's storytelling')",
+  "summary": "A 2-3 sentence engaging summary of their overall style written directly to them"
+}`
+        },
+        {
+          role: "user",
+          content: `Analyze the lyrical style of @${username} based on these bars:\n\n${barsText}`
+        }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 600,
+    });
+
+    const result = JSON.parse(response.choices[0]?.message?.content || "{}");
+    return {
+      primaryStyle: result.primaryStyle || "Unique",
+      secondaryStyles: result.secondaryStyles || [],
+      strengths: result.strengths || [],
+      characteristics: result.characteristics || [],
+      comparison: result.comparison || "",
+      summary: result.summary || "Style analysis unavailable.",
+    };
+  } catch (error) {
+    console.error("Style analysis error:", error);
+    return {
+      primaryStyle: "Unknown",
+      secondaryStyles: [],
+      strengths: [],
+      characteristics: [],
+      comparison: "",
+      summary: "Sorry, I couldn't analyze this user's style right now.",
+    };
+  }
+}
+
 export interface PlatformContext {
   users?: Array<{
     username: string;

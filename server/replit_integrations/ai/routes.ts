@@ -1,5 +1,5 @@
 import type { Express, Request, Response } from "express";
-import { moderateContent, explainBar, suggestRhymes, chatWithAssistant, type PlatformContext } from "./barAssistant";
+import { moderateContent, explainBar, suggestRhymes, chatWithAssistant, analyzeUserStyle, type PlatformContext, type StyleAnalysis } from "./barAssistant";
 import { storage } from "../../storage";
 
 function extractPotentialUsernames(message: string): string[] {
@@ -35,8 +35,25 @@ function extractPotentialUsernames(message: string): string[] {
   return Array.from(new Set(usernames));
 }
 
-async function buildPlatformContext(usernames: string[]): Promise<PlatformContext> {
-  const context: PlatformContext = { users: [], bars: [] };
+function isStyleAnalysisRequest(message: string): boolean {
+  const stylePatterns = [
+    /style/i,
+    /analyze.*(?:bars?|lyrics?|writing)/i,
+    /(?:bars?|lyrics?|writing).*analyze/i,
+    /what.*(?:type|kind).*(?:rapper|lyricist|writer)/i,
+    /how.*(?:write|rap|spit)/i,
+    /(?:describe|breakdown|break down).*(?:style|flow|bars?)/i,
+    /(?:lyrical|rapping|writing)\s*style/i,
+  ];
+  return stylePatterns.some(pattern => pattern.test(message));
+}
+
+interface ExtendedPlatformContext extends PlatformContext {
+  styleAnalyses?: Record<string, StyleAnalysis>;
+}
+
+async function buildPlatformContext(usernames: string[], includeStyleAnalysis: boolean = false): Promise<ExtendedPlatformContext> {
+  const context: ExtendedPlatformContext = { users: [], bars: [], styleAnalyses: {} };
   
   for (const username of usernames.slice(0, 3)) {
     try {
@@ -48,7 +65,7 @@ async function buildPlatformContext(usernames: string[]): Promise<PlatformContex
         
         const publicBars = userBars
           .filter(b => b.permissionStatus !== "private")
-          .slice(0, 6)
+          .slice(0, includeStyleAnalysis ? 20 : 6)
           .map(b => b.content.substring(0, 300));
         
         context.users!.push({
@@ -61,6 +78,11 @@ async function buildPlatformContext(usernames: string[]): Promise<PlatformContex
           isAdmin: user.isAdmin || false,
           topBars: publicBars,
         });
+        
+        if (includeStyleAnalysis && publicBars.length > 0) {
+          const styleAnalysis = await analyzeUserStyle(publicBars, user.username);
+          context.styleAnalyses![user.username.toLowerCase()] = styleAnalysis;
+        }
       }
     } catch (e) {
       console.error(`Failed to lookup user ${username}:`, e);
@@ -121,11 +143,32 @@ export function registerAIRoutes(app: Express): void {
       }
       
       const potentialUsernames = extractPotentialUsernames(message);
+      const needsStyleAnalysis = isStyleAnalysisRequest(message) && potentialUsernames.length > 0;
+      
       const platformContext = potentialUsernames.length > 0 
-        ? await buildPlatformContext(potentialUsernames)
+        ? await buildPlatformContext(potentialUsernames, needsStyleAnalysis)
         : undefined;
       
-      const response = await chatWithAssistant(message, platformContext);
+      let enrichedMessage = message;
+      if (needsStyleAnalysis && platformContext?.styleAnalyses) {
+        const styleInfoBlocks: string[] = [];
+        for (const [username, analysis] of Object.entries(platformContext.styleAnalyses)) {
+          styleInfoBlocks.push(`
+=== STYLE ANALYSIS FOR @${username} ===
+Primary Style: ${analysis.primaryStyle}
+Secondary Styles: ${analysis.secondaryStyles.join(", ") || "N/A"}
+Strengths: ${analysis.strengths.join(", ") || "N/A"}
+Characteristics: ${analysis.characteristics.join(", ") || "N/A"}
+Comparison: ${analysis.comparison || "N/A"}
+Summary: ${analysis.summary}
+=== END STYLE ANALYSIS ===`);
+        }
+        if (styleInfoBlocks.length > 0) {
+          enrichedMessage = message + "\n\n[CONTEXT: The user is asking about style. Use this analysis data to respond:]\n" + styleInfoBlocks.join("\n");
+        }
+      }
+      
+      const response = await chatWithAssistant(enrichedMessage, platformContext);
       res.json({ response });
     } catch (error) {
       console.error("Chat API error:", error);
