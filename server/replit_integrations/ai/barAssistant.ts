@@ -51,7 +51,7 @@ function containsBlockedSlurs(content: string): { blocked: boolean; matches: str
   return { blocked: matches.length > 0, matches };
 }
 
-export async function moderateContent(content: string): Promise<ModerationResult> {
+export async function moderateContent(content: string, strictness: string = "balanced"): Promise<ModerationResult> {
   // FIRST: Check hardcoded blocklist - instant block for worst slurs
   const slurCheck = containsBlockedSlurs(content);
   if (slurCheck.blocked) {
@@ -64,13 +64,19 @@ export async function moderateContent(content: string): Promise<ModerationResult
     };
   }
 
+  const strictnessInstructions = {
+    lenient: "Be LENIENT. Allow edgy content, only block clear policy violations like hate speech, threats, or illegal content. Give benefit of the doubt.",
+    balanced: "Be BALANCED. Block hate speech and clear violations, but allow creative expression and typical hip-hop content.",
+    strict: "Be STRICT. Flag borderline content for review. When in doubt, reject or flag for manual review.",
+  };
+
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are a strict content moderator for Orphan Bars, a platform for sharing rap lyrics and punchlines. 
+          content: `You are a content moderator for Orphan Bars, a platform for sharing rap lyrics and punchlines. 
 
 MUST REJECT content containing:
 1. Racial slurs or hate speech targeting any group (race, religion, sexuality, gender, disability)
@@ -82,7 +88,7 @@ MUST REJECT content containing:
 Hip-hop culture allows: wordplay, metaphors, braggadocio, battle rap style disses, slang, mild profanity, and creative expression.
 Battle rap disses about skills/talent are fine. Edgy content is fine. But hate speech is NOT artistic expression.
 
-Be STRICT about hate speech. When in doubt, reject.
+${strictnessInstructions[strictness as keyof typeof strictnessInstructions] || strictnessInstructions.balanced}
 
 Respond in JSON format:
 {
@@ -300,7 +306,7 @@ export interface PlatformContext {
   }>;
 }
 
-export async function chatWithAssistant(message: string, platformContext?: PlatformContext): Promise<string> {
+export async function chatWithAssistant(message: string, platformContext?: PlatformContext, customPersonality?: string): Promise<string> {
   try {
     let contextBlock = "";
     
@@ -334,6 +340,8 @@ export async function chatWithAssistant(message: string, platformContext?: Platf
       contextBlock += "=== END BARS ===\n";
     }
 
+    const personalityInstructions = customPersonality ? `\n\nADDITIONAL PERSONALITY INSTRUCTIONS FROM SITE OWNER:\n${customPersonality}\n` : "";
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -353,7 +361,7 @@ CRITICAL RULES:
 4. If someone asks "who is X" and X is not in the context, acknowledge you don't have their profile data.
 5. You can still discuss hip-hop culture, techniques, and general topics freely.
 
-Be conversational, helpful, and honest. Keep responses concise.${contextBlock}`
+Be conversational, helpful, and honest. Keep responses concise.${personalityInstructions}${contextBlock}`
         },
         {
           role: "user",

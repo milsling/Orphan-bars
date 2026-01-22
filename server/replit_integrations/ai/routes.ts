@@ -95,11 +95,15 @@ async function buildPlatformContext(usernames: string[], includeStyleAnalysis: b
 export function registerAIRoutes(app: Express): void {
   app.post("/api/ai/moderate", async (req: Request, res: Response) => {
     try {
+      const settings = await storage.getAISettings();
+      if (!settings.moderationEnabled) {
+        return res.json({ approved: true, flagged: false, reasons: [], plagiarismRisk: "none" });
+      }
       const { content } = req.body;
       if (!content) {
         return res.status(400).json({ error: "Content is required" });
       }
-      const result = await moderateContent(content);
+      const result = await moderateContent(content, settings.moderationStrictness);
       res.json(result);
     } catch (error) {
       console.error("Moderation API error:", error);
@@ -109,6 +113,10 @@ export function registerAIRoutes(app: Express): void {
 
   app.post("/api/ai/explain", async (req: Request, res: Response) => {
     try {
+      const settings = await storage.getAISettings();
+      if (!settings.barExplanationsEnabled) {
+        return res.status(403).json({ error: "Bar explanations are currently disabled" });
+      }
       const { content } = req.body;
       if (!content) {
         return res.status(400).json({ error: "Content is required" });
@@ -123,6 +131,10 @@ export function registerAIRoutes(app: Express): void {
 
   app.post("/api/ai/suggest", async (req: Request, res: Response) => {
     try {
+      const settings = await storage.getAISettings();
+      if (!settings.rhymeSuggestionsEnabled) {
+        return res.status(403).json({ error: "Rhyme suggestions are currently disabled" });
+      }
       const { topic, style } = req.body;
       if (!topic) {
         return res.status(400).json({ error: "Topic is required" });
@@ -137,13 +149,18 @@ export function registerAIRoutes(app: Express): void {
 
   app.post("/api/ai/chat", async (req: Request, res: Response) => {
     try {
+      const settings = await storage.getAISettings();
+      if (!settings.orphieChatEnabled) {
+        return res.status(403).json({ error: "Orphie chat is currently disabled" });
+      }
+      
       const { message } = req.body;
       if (!message) {
         return res.status(400).json({ error: "Message is required" });
       }
       
       const potentialUsernames = extractPotentialUsernames(message);
-      const needsStyleAnalysis = isStyleAnalysisRequest(message) && potentialUsernames.length > 0;
+      const needsStyleAnalysis = settings.styleAnalysisEnabled && isStyleAnalysisRequest(message) && potentialUsernames.length > 0;
       
       const platformContext = potentialUsernames.length > 0 
         ? await buildPlatformContext(potentialUsernames, needsStyleAnalysis)
@@ -168,7 +185,7 @@ Summary: ${analysis.summary}
         }
       }
       
-      const response = await chatWithAssistant(enrichedMessage, platformContext);
+      const response = await chatWithAssistant(enrichedMessage, platformContext, settings.orphiePersonality || undefined);
       res.json({ response });
     } catch (error) {
       console.error("Chat API error:", error);
