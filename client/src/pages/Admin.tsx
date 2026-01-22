@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban, Flag, AlertTriangle, Eye, Wrench, Archive, RotateCcw, Trophy, Plus, Pencil, Power, Clock, Check, X, Upload, Image, Star, Bot, FileQuestion } from "lucide-react";
+import { Shield, Users, FileText, Trash2, Crown, CheckCircle, XCircle, Ban, Flag, AlertTriangle, Eye, Wrench, Archive, RotateCcw, Trophy, Plus, Pencil, Power, Clock, Check, X, Upload, Image, Star, Bot, FileQuestion, Lock } from "lucide-react";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useLocation } from "wouter";
 import { useBars } from "@/context/BarContext";
@@ -1066,6 +1066,63 @@ export default function Admin() {
     },
   });
 
+  // Protected Bars state and queries (owner only)
+  const [protectedBarContent, setProtectedBarContent] = useState("");
+  const [protectedBarNotes, setProtectedBarNotes] = useState("");
+
+  const { data: protectedBars = [], isLoading: isLoadingProtectedBars } = useQuery<any[]>({
+    queryKey: ['protected-bars'],
+    queryFn: async () => {
+      const res = await fetch('/api/protected-bars', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch protected bars');
+      return res.json();
+    },
+    enabled: !!currentUser?.isOwner,
+  });
+
+  const createProtectedBarMutation = useMutation({
+    mutationFn: async (data: { content: string; notes?: string }) => {
+      const res = await fetch('/api/protected-bars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to create protected bar');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['protected-bars'] });
+      setProtectedBarContent("");
+      setProtectedBarNotes("");
+      toast({ title: "Bar added to your secret backlog" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteProtectedBarMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/protected-bars/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete protected bar');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['protected-bars'] });
+      toast({ title: "Protected bar removed" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const resetBadgeForm = () => {
     setBadgeName("");
     setBadgeDisplayName("");
@@ -1279,7 +1336,7 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full mb-6 ${(currentUser?.isOwner || currentUser?.isAdminPlus) ? 'grid-cols-8' : 'grid-cols-7'}`}>
+          <TabsList className={`grid w-full mb-6 ${currentUser?.isOwner ? 'grid-cols-9' : (currentUser?.isAdminPlus ? 'grid-cols-8' : 'grid-cols-7')}`}>
             <TabsTrigger value="moderation" className="gap-1 text-xs px-2">
               <Eye className="h-4 w-4" />
               <span className="hidden sm:inline">Review</span>
@@ -1332,6 +1389,17 @@ export default function Admin() {
               <TabsTrigger value="achievements" className="gap-1 text-xs px-2">
                 <Trophy className="h-4 w-4" />
                 <span className="hidden sm:inline">Badges</span>
+              </TabsTrigger>
+            )}
+            {currentUser?.isOwner && (
+              <TabsTrigger value="protected" className="gap-1 text-xs px-2">
+                <Lock className="h-4 w-4" />
+                <span className="hidden sm:inline">Protected</span>
+                {protectedBars.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {protectedBars.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             )}
           </TabsList>
@@ -3351,6 +3419,117 @@ export default function Admin() {
           )}
 
           {currentUser?.isOwner && (
+            <TabsContent value="protected">
+              <Card className="border-border bg-card/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-yellow-500" />
+                    Protected Bars (Secret Backlog)
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Add bars here to block others from posting similar content. You can still post these whenever you want.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4 border border-border rounded-lg p-4">
+                    <div>
+                      <Label htmlFor="protected-content">Bar Content</Label>
+                      <Textarea
+                        id="protected-content"
+                        placeholder="Enter the bar you want to protect..."
+                        value={protectedBarContent}
+                        onChange={(e) => setProtectedBarContent(e.target.value)}
+                        className="min-h-[80px]"
+                        data-testid="input-protected-content"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="protected-notes">Private Notes (optional)</Label>
+                      <Input
+                        id="protected-notes"
+                        placeholder="Notes for yourself about this bar..."
+                        value={protectedBarNotes}
+                        onChange={(e) => setProtectedBarNotes(e.target.value)}
+                        data-testid="input-protected-notes"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => createProtectedBarMutation.mutate({
+                        content: protectedBarContent,
+                        notes: protectedBarNotes || undefined,
+                      })}
+                      disabled={!protectedBarContent.trim() || createProtectedBarMutation.isPending}
+                      className="w-full"
+                      data-testid="button-add-protected"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      {createProtectedBarMutation.isPending ? "Adding..." : "Add to Secret Backlog"}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-lg">Your Protected Bars ({protectedBars.length})</h3>
+                    {isLoadingProtectedBars ? (
+                      <p className="text-muted-foreground">Loading...</p>
+                    ) : protectedBars.length === 0 ? (
+                      <p className="text-muted-foreground">No protected bars yet. Add some bars above to protect your content.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {protectedBars.map((bar: any) => (
+                          <div key={bar.id} className="border border-border rounded-lg p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <p className="font-medium">{bar.content}</p>
+                                {bar.notes && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    Notes: {bar.notes}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Added: {new Date(bar.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-600"
+                                    data-testid={`button-delete-protected-${bar.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remove Protected Bar?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will allow others to post similar content. Are you sure?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteProtectedBarMutation.mutate(bar.id)}
+                                      className="bg-red-500 hover:bg-red-600"
+                                    >
+                                      Remove
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {currentUser?.isOwner && (
             <TabsContent value="console">
               <Card className="border-border bg-card/50">
                 <CardHeader>
@@ -3361,7 +3540,19 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Owner-only quick access buttons */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2 h-auto py-3"
+                      onClick={() => setActiveTab("protected")}
+                      data-testid="button-goto-protected"
+                    >
+                      <Lock className="h-5 w-5 text-yellow-500" />
+                      <span>Protected</span>
+                      {protectedBars.length > 0 && (
+                        <Badge className="ml-1 bg-yellow-500 text-xs">{protectedBars.length}</Badge>
+                      )}
+                    </Button>
                     <Button
                       variant="outline"
                       className="flex items-center gap-2 h-auto py-3"
