@@ -1309,11 +1309,18 @@ export async function registerRoutes(
       if (displayedBadges.length > 5) {
         return res.status(400).json({ message: "Maximum 5 badges can be displayed" });
       }
-      // Verify all badges are valid achievement IDs (built-in or custom)
+      // Verify all badges are valid - can be achievement IDs OR profile badge IDs
       const customAchievements = await storage.getActiveCustomAchievements();
       const validCustomIds = new Set(customAchievements.map(a => `custom_${a.id}`));
+      const userOwnedBadges = await storage.getUserBadges(req.user!.id);
+      const validProfileBadgeIds = new Set(userOwnedBadges.map(ub => ub.badgeId));
+      
       for (const badgeId of displayedBadges) {
-        if (!ACHIEVEMENTS[badgeId as keyof typeof ACHIEVEMENTS] && !validCustomIds.has(badgeId)) {
+        const isBuiltInAchievement = !!ACHIEVEMENTS[badgeId as keyof typeof ACHIEVEMENTS];
+        const isCustomAchievement = validCustomIds.has(badgeId);
+        const isProfileBadge = validProfileBadgeIds.has(badgeId);
+        
+        if (!isBuiltInAchievement && !isCustomAchievement && !isProfileBadge) {
           return res.status(400).json({ message: `Invalid badge ID: ${badgeId}` });
         }
       }
@@ -2682,19 +2689,30 @@ export async function registerRoutes(
     }
   });
 
-  // Set displayed badges for current user
+  // Set displayed badges for current user (accepts both profile badges AND achievement IDs)
   app.patch("/api/badges/displayed", isAuthenticated, async (req, res) => {
     try {
       const { badgeIds } = req.body;
       if (!Array.isArray(badgeIds)) {
         return res.status(400).json({ message: "badgeIds must be an array" });
       }
-      // Verify user owns all badges they want to display
+      if (badgeIds.length > 5) {
+        return res.status(400).json({ message: "Maximum 5 badges can be displayed" });
+      }
+      // Verify all badges are valid - can be profile badges OR achievement IDs
       const userBadges = await storage.getUserBadges(req.user!.id);
       const ownedBadgeIds = new Set(userBadges.map(ub => ub.badgeId));
-      const invalidBadges = badgeIds.filter((id: string) => !ownedBadgeIds.has(id));
-      if (invalidBadges.length > 0) {
-        return res.status(400).json({ message: "You can only display badges you own" });
+      const customAchievements = await storage.getActiveCustomAchievements();
+      const validCustomIds = new Set(customAchievements.map(a => `custom_${a.id}`));
+      
+      for (const badgeId of badgeIds) {
+        const isBuiltInAchievement = !!ACHIEVEMENTS[badgeId as keyof typeof ACHIEVEMENTS];
+        const isCustomAchievement = validCustomIds.has(badgeId);
+        const isProfileBadge = ownedBadgeIds.has(badgeId);
+        
+        if (!isBuiltInAchievement && !isCustomAchievement && !isProfileBadge) {
+          return res.status(400).json({ message: `Invalid badge ID: ${badgeId}` });
+        }
       }
       await storage.setDisplayedBadges(req.user!.id, badgeIds);
       res.json({ success: true, displayedBadges: badgeIds });
