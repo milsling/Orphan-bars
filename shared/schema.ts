@@ -669,3 +669,30 @@ export const insertProtectedBarSchema = createInsertSchema(protectedBars).omit({
   id: true,
   createdAt: true,
 });
+
+// AI Settings - Owner configurable AI abilities
+export const aiSettings = pgTable("ai_settings", {
+  id: varchar("id").primaryKey().default(sql`'default'`),
+  // Feature toggles
+  moderationEnabled: boolean("moderation_enabled").notNull().default(true),
+  styleAnalysisEnabled: boolean("style_analysis_enabled").notNull().default(true),
+  orphieChatEnabled: boolean("orphie_chat_enabled").notNull().default(true),
+  barExplanationsEnabled: boolean("bar_explanations_enabled").notNull().default(true),
+  rhymeSuggestionsEnabled: boolean("rhyme_suggestions_enabled").notNull().default(true),
+  // Moderation settings
+  moderationStrictness: text("moderation_strictness").notNull().default("balanced"), // "lenient", "balanced", "strict"
+  autoApproveEnabled: boolean("auto_approve_enabled").notNull().default(true),
+  // Orphie customization
+  orphiePersonality: text("orphie_personality"), // Custom instructions for Orphie
+  orphieGreeting: text("orphie_greeting"), // Custom greeting message
+  // Rate limits (per user per hour)
+  chatRateLimit: integer("chat_rate_limit").notNull().default(50),
+  explanationRateLimit: integer("explanation_rate_limit").notNull().default(30),
+  suggestionRateLimit: integer("suggestion_rate_limit").notNull().default(20),
+  // Timestamps
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
+export type AISettings = typeof aiSettings.$inferSelect;
+export type InsertAISettings = typeof aiSettings.$inferInsert;
