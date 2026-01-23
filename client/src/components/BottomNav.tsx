@@ -275,7 +275,8 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
         )}
       </AnimatePresence>
 
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] pb-safe">
+      {/* Mobile Bottom Nav - phones only */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] pb-safe">
         <div className="bg-background backdrop-blur-lg border-t border-border">
           <div className="flex items-center justify-between h-16 px-2">
             <button
@@ -357,6 +358,192 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
               <span className="text-[10px] font-medium">Profile</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Tablet FAB Menu - iPad/tablets only */}
+      <div className="hidden md:block lg:hidden fixed bottom-6 right-6 z-[100]">
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              onClick={() => setIsOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+        
+        <div className="relative z-50">
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="absolute bottom-16 right-0 flex flex-col items-end gap-2 mb-2"
+              >
+                {/* Drop a Bar */}
+                {currentUser && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: 0.05 }}
+                    onClick={() => { handleNavClick("/post"); setIsOpen(false); }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+                    data-testid="fab-drop-bar"
+                  >
+                    <span className="font-medium whitespace-nowrap" style={{ fontFamily: 'var(--font-logo)' }}>Drop a Bar</span>
+                    <Plus className="w-5 h-5" />
+                  </motion.button>
+                )}
+
+                {/* Friends */}
+                {currentUser && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: 0.1 }}
+                    onClick={() => { handleNavClick("/friends"); setIsOpen(false); }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                    data-testid="fab-friends"
+                  >
+                    <span className="font-medium">Friends</span>
+                    <div className="relative">
+                      <Users className="w-5 h-5" />
+                      {pendingFriendRequests > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      )}
+                    </div>
+                  </motion.button>
+                )}
+
+                {/* Messages */}
+                {currentUser && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: 0.15 }}
+                    onClick={() => { handleNavClick("/messages"); setIsOpen(false); }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                    data-testid="fab-messages"
+                  >
+                    <span className="font-medium">Messages</span>
+                    <div className="relative">
+                      <MessageCircle className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      )}
+                    </div>
+                  </motion.button>
+                )}
+
+                {/* Profile */}
+                {currentUser && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: 0.2 }}
+                    onClick={() => { handleNavClick("/profile"); setIsOpen(false); }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                    data-testid="fab-profile"
+                  >
+                    <span className="font-medium">Profile</span>
+                    <User className="w-5 h-5" />
+                  </motion.button>
+                )}
+
+                {/* Home */}
+                <motion.button
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: 0.25 }}
+                  onClick={() => { handleNavClick("/"); setIsOpen(false); }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                  data-testid="fab-home"
+                >
+                  <span className="font-medium">Home</span>
+                  <Home className="w-5 h-5" />
+                </motion.button>
+
+                {/* Orphanage */}
+                <motion.button
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: 0.3 }}
+                  onClick={() => { handleNavClick("/orphanage"); setIsOpen(false); }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                  data-testid="fab-orphanage"
+                >
+                  <span className="font-medium">Orphanage</span>
+                  <DoorOpen className="w-5 h-5" />
+                </motion.button>
+
+                {/* Orphie AI */}
+                {currentUser && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: 0.35 }}
+                    onClick={() => { setIsOpen(false); setOrphieOpen(true); }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-full shadow-lg hover:from-purple-500 hover:to-purple-400 transition-colors"
+                    data-testid="fab-orphie"
+                  >
+                    <span className="font-medium">Orphie</span>
+                    <Sparkles className="w-5 h-5" />
+                  </motion.button>
+                )}
+
+                {/* Admin */}
+                {currentUser?.isAdmin && (
+                  <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: 0.4 }}
+                    onClick={() => { handleNavClick("/admin"); setIsOpen(false); }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                    data-testid="fab-admin"
+                  >
+                    <span className="font-medium">Admin</span>
+                    <Shield className="w-5 h-5" />
+                  </motion.button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* FAB Button */}
+          <motion.button
+            onClick={handleCenterClick}
+            className={cn(
+              "w-14 h-14 rounded-full",
+              "bg-gradient-to-br from-primary to-primary/80",
+              "flex items-center justify-center",
+              "shadow-xl shadow-primary/40",
+              isOpen && "from-destructive to-destructive/80 shadow-destructive/40"
+            )}
+            whileTap={{ scale: 0.9 }}
+            data-testid="fab-menu-button"
+          >
+            {isOpen ? (
+              <X className="w-6 h-6 text-primary-foreground" />
+            ) : (
+              <Grid3X3 className="w-6 h-6 text-primary-foreground" />
+            )}
+          </motion.button>
+          {!isOpen && (unreadCount > 0 || pendingFriendRequests > 0) && (
+            <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-primary border-2 border-background shadow-[0_0_8px_3px_rgba(168,85,247,0.7)] animate-pulse" />
+          )}
         </div>
       </div>
       
