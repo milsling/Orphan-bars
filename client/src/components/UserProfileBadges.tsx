@@ -82,13 +82,13 @@ export function UserProfileBadges({
               <span
                 className={cn(
                   "inline-flex items-center justify-center rounded gap-0.5 transition-all cursor-default font-medium",
-                  sizeClasses[size],
+                  !badge.imageUrl && sizeClasses[size],
                   badge.animation === "pulse" && "animate-pulse",
                   badge.animation === "glow" && "shadow-sm shadow-primary/50",
                   badge.animation === "bounce" && "hover:animate-bounce",
                   badge.animation === "shimmer" && "relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:animate-[shimmer_2s_infinite]"
                 )}
-                style={{
+                style={badge.imageUrl ? {} : {
                   color: badge.color || "#fff",
                   backgroundColor: badge.backgroundColor || "hsl(var(--primary))",
                   borderColor: badge.borderColor || undefined,
