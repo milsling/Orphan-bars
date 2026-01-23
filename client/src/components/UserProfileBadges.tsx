@@ -79,36 +79,43 @@ export function UserProfileBadges({
         <TooltipProvider key={badge.id}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span
-                className={cn(
-                  "inline-flex items-center justify-center rounded gap-0.5 transition-all cursor-default font-medium",
-                  !badge.imageUrl && sizeClasses[size],
-                  badge.animation === "pulse" && "animate-pulse",
-                  badge.animation === "glow" && "shadow-sm shadow-primary/50",
-                  badge.animation === "bounce" && "hover:animate-bounce",
-                  badge.animation === "shimmer" && "relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:animate-[shimmer_2s_infinite]"
-                )}
-                style={badge.imageUrl ? {} : {
-                  color: badge.color || "#fff",
-                  backgroundColor: badge.backgroundColor || "hsl(var(--primary))",
-                  borderColor: badge.borderColor || undefined,
-                  borderWidth: badge.borderColor ? "1px" : undefined,
-                  borderStyle: badge.borderColor ? "solid" : undefined,
-                }}
-                data-testid={`profile-badge-${badge.id}`}
-              >
-                {badge.imageUrl ? (
-                  <img
-                    src={badge.imageUrl}
-                    alt={badge.displayName}
-                    className={cn("object-contain", imgSizes[size])}
-                  />
-                ) : (
+              {badge.imageUrl ? (
+                <img
+                  src={badge.imageUrl}
+                  alt={badge.displayName}
+                  className={cn(
+                    "object-contain cursor-default",
+                    imgSizes[size],
+                    badge.animation === "pulse" && "animate-pulse",
+                    badge.animation === "glow" && "drop-shadow-[0_0_4px_rgba(168,85,247,0.6)]",
+                    badge.animation === "bounce" && "hover:animate-bounce"
+                  )}
+                  data-testid={`profile-badge-${badge.id}`}
+                />
+              ) : (
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-center rounded gap-0.5 transition-all cursor-default font-medium",
+                    sizeClasses[size],
+                    badge.animation === "pulse" && "animate-pulse",
+                    badge.animation === "glow" && "shadow-sm shadow-primary/50",
+                    badge.animation === "bounce" && "hover:animate-bounce",
+                    badge.animation === "shimmer" && "relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:animate-[shimmer_2s_infinite]"
+                  )}
+                  style={{
+                    color: badge.color || "#fff",
+                    backgroundColor: badge.backgroundColor || "hsl(var(--primary))",
+                    borderColor: badge.borderColor || undefined,
+                    borderWidth: badge.borderColor ? "1px" : undefined,
+                    borderStyle: badge.borderColor ? "solid" : undefined,
+                  }}
+                  data-testid={`profile-badge-${badge.id}`}
+                >
                   <span className={cn("font-semibold uppercase tracking-wide", textSizes[size])}>
                     {badge.displayName}
                   </span>
-                )}
-              </span>
+                </span>
+              )}
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[200px]">
               <p className="font-semibold">{badge.displayName}</p>
