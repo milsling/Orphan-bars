@@ -1488,14 +1488,18 @@ export class DatabaseStorage implements IStorage {
     const existingAchievements = await this.getUserAchievements(userId);
     const existingIds = new Set(existingAchievements.map(a => a.achievementId));
     
+    // Lazy-load full metrics only if needed for new achievements
+    let metrics: UserMetrics | null = null;
+    
     const newlyUnlocked: AchievementId[] = [];
     
     for (const [id, achievement] of Object.entries(ACHIEVEMENTS)) {
       if (existingIds.has(id)) continue;
       
-      const threshold = achievement.threshold;
+      const threshold = achievement.threshold as Record<string, number>;
       let unlocked = false;
       
+      // Original thresholds (use stats for efficiency)
       if ('barsMinted' in threshold && stats.barsMinted >= threshold.barsMinted) {
         unlocked = true;
       } else if ('likesReceived' in threshold && stats.likesReceived >= threshold.likesReceived) {
@@ -1504,6 +1508,51 @@ export class DatabaseStorage implements IStorage {
         unlocked = true;
       } else if ('topBarLikes' in threshold && stats.topBarLikes >= threshold.topBarLikes) {
         unlocked = true;
+      } else {
+        // New thresholds require full metrics
+        if (!metrics) {
+          metrics = await this.getUserMetricsForAchievements(userId);
+        }
+        
+        // Engagement & Virality
+        if ('topBarEngagement' in threshold && metrics.top_bar_engagement >= threshold.topBarEngagement) {
+          unlocked = true;
+        } else if ('topBarComments' in threshold && metrics.single_bar_comments >= threshold.topBarComments) {
+          unlocked = true;
+        } else if ('commentsMade' in threshold && metrics.comments_made >= threshold.commentsMade) {
+          unlocked = true;
+        } else if ('barsAdoptedByOthers' in threshold && metrics.bars_adopted_by_others >= threshold.barsAdoptedByOthers) {
+          unlocked = true;
+        }
+        // Consistency & Streaks
+        else if ('streakDays' in threshold && metrics.posting_streak_days >= threshold.streakDays) {
+          unlocked = true;
+        } else if ('weekendBars' in threshold && metrics.weekend_bars >= threshold.weekendBars) {
+          unlocked = true;
+        } else if ('midnightBars' in threshold && metrics.midnight_bars >= threshold.midnightBars) {
+          unlocked = true;
+        }
+        // Community & Social
+        else if ('adoptionsGiven' in threshold && metrics.adoptions_given >= threshold.adoptionsGiven) {
+          unlocked = true;
+        } else if ('commentLikesReceived' in threshold && metrics.comment_likes_received >= threshold.commentLikesReceived) {
+          unlocked = true;
+        } else if ('following' in threshold && metrics.following_count >= threshold.following) {
+          unlocked = true;
+        }
+        // Platform Health
+        else if ('cleanDays' in threshold && metrics.days_without_violations >= threshold.cleanDays) {
+          unlocked = true;
+        }
+        // Special
+        else if ('accountAgeDays' in threshold && metrics.account_age_days >= threshold.accountAgeDays) {
+          unlocked = true;
+        } else if ('underdogBar' in threshold) {
+          // Check underdog: bar with 50+ likes from user with <50 followers at time of check
+          if (stats.followers < 50 && stats.topBarLikes >= 50) {
+            unlocked = true;
+          }
+        }
       }
       
       if (unlocked) {
@@ -1817,11 +1866,11 @@ export class DatabaseStorage implements IStorage {
     const followingCount = await this.getFollowingCount(userId);
     
     // Get top bar comments count
-    const userBars = await db.select({ id: bars.id }).from(bars).where(eq(bars.userId, userId));
+    const userBars = await db.select({ id: bars.id, createdAt: bars.createdAt }).from(bars).where(eq(bars.userId, userId));
     let topBarComments = 0;
     for (const bar of userBars) {
-      const count = await this.getCommentCount(bar.id);
-      if (count > topBarComments) topBarComments = count;
+      const cnt = await this.getCommentCount(bar.id);
+      if (cnt > topBarComments) topBarComments = cnt;
     }
     
     // Get top bar bookmarks count
@@ -1840,7 +1889,7 @@ export class DatabaseStorage implements IStorage {
       .from(comments)
       .where(eq(comments.userId, userId));
     
-    // Get bars adopted count
+    // Get bars adopted count (by user)
     const [barsAdopted] = await db
       .select({ count: count() })
       .from(barUsages)
@@ -1857,7 +1906,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Check night owl
+    // Check night owl (midnight - 5am)
     const nightBars = await db
       .select({ id: bars.id })
       .from(bars)
@@ -1877,6 +1926,110 @@ export class DatabaseStorage implements IStorage {
       ))
       .limit(1);
     
+    // NEW METRICS
+    
+    // Calculate posting streak days
+    let streakDays = 0;
+    if (userBars.length > 0) {
+      const postDates = userBars
+        .map(b => new Date(b.createdAt!).toDateString())
+        .filter((v, i, a) => a.indexOf(v) === i) // unique dates
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()); // newest first
+      
+      const today = new Date();
+      const todayStr = today.toDateString();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toDateString();
+      
+      // Start counting if posted today or yesterday
+      if (postDates[0] === todayStr || postDates[0] === yesterdayStr) {
+        let currentDate = new Date(postDates[0]);
+        streakDays = 1;
+        for (let i = 1; i < postDates.length; i++) {
+          const prevDay = new Date(currentDate);
+          prevDay.setDate(prevDay.getDate() - 1);
+          if (postDates[i] === prevDay.toDateString()) {
+            streakDays++;
+            currentDate = prevDay;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+    
+    // Comment likes received
+    const [commentLikesResult] = await db
+      .select({ count: count() })
+      .from(commentLikes)
+      .innerJoin(comments, eq(commentLikes.commentId, comments.id))
+      .where(eq(comments.userId, userId));
+    
+    // Adoptions given (bars the user adopted from others)
+    const [adoptionsGivenResult] = await db
+      .select({ count: count() })
+      .from(adoptions)
+      .where(eq(adoptions.adoptedByUserId, userId));
+    
+    // Bars adopted by others (user's bars that were adopted)
+    const [barsAdoptedByOthersResult] = await db
+      .select({ count: count() })
+      .from(adoptions)
+      .innerJoin(bars, eq(adoptions.originalBarId, bars.id))
+      .where(eq(bars.userId, userId));
+    
+    // Weekend bars (Fri 8PM to Sun 8PM approximated as Sat/Sun)
+    const [weekendBarsResult] = await db
+      .select({ count: count() })
+      .from(bars)
+      .where(and(
+        eq(bars.userId, userId),
+        sql`EXTRACT(DOW FROM ${bars.createdAt}) IN (0, 6)` // 0=Sunday, 6=Saturday
+      ));
+    
+    // Midnight bars (12AM-5AM)
+    const [midnightBarsResult] = await db
+      .select({ count: count() })
+      .from(bars)
+      .where(and(
+        eq(bars.userId, userId),
+        sql`EXTRACT(HOUR FROM ${bars.createdAt}) >= 0 AND EXTRACT(HOUR FROM ${bars.createdAt}) < 5`
+      ));
+    
+    // Days without violations (since last action_taken report or account creation)
+    const user = await this.getUser(userId);
+    const accountCreated = user?.createdAt || new Date();
+    const [lastViolation] = await db
+      .select({ createdAt: reports.createdAt })
+      .from(reports)
+      .where(and(
+        eq(reports.reportedUserId, userId),
+        eq(reports.status, 'action_taken')
+      ))
+      .orderBy(desc(reports.createdAt))
+      .limit(1);
+    
+    const lastViolationDate = lastViolation?.createdAt || accountCreated;
+    const cleanDays = Math.floor((Date.now() - new Date(lastViolationDate).getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Top bar engagement (likes + bookmarks on a single bar)
+    let topBarEngagement = 0;
+    for (const bar of userBars) {
+      const likeCount = await this.getLikeCount(bar.id);
+      const [bookmarkCount] = await db
+        .select({ count: count() })
+        .from(bookmarks)
+        .where(eq(bookmarks.barId, bar.id));
+      const totalEngagement = likeCount + (bookmarkCount?.count || 0);
+      if (totalEngagement > topBarEngagement) {
+        topBarEngagement = totalEngagement;
+      }
+    }
+    
+    // Account age in days
+    const accountAgeDays = Math.floor((Date.now() - new Date(accountCreated).getTime()) / (1000 * 60 * 60 * 24));
+    
     return {
       bars_posted: stats.barsMinted,
       likes_received: stats.likesReceived,
@@ -1891,6 +2044,17 @@ export class DatabaseStorage implements IStorage {
       night_owl: nightBars.length > 0,
       early_bird: earlyBars.length > 0,
       bars_with_keyword: 0, // Handled dynamically via keywordCounts
+      // New metrics
+      posting_streak_days: streakDays,
+      comment_likes_received: commentLikesResult?.count || 0,
+      adoptions_given: adoptionsGivenResult?.count || 0,
+      bars_adopted_by_others: barsAdoptedByOthersResult?.count || 0,
+      weekend_bars: weekendBarsResult?.count || 0,
+      midnight_bars: midnightBarsResult?.count || 0,
+      days_without_violations: cleanDays,
+      top_bar_engagement: topBarEngagement,
+      tagged_bars_with_likes: 0, // Handled dynamically
+      account_age_days: accountAgeDays,
     };
   }
   
