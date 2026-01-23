@@ -53,6 +53,9 @@ export function UserProfileBadges({
 
   const displayBadges = badges.slice(0, maxBadges);
 
+  // Debug: log what's being returned
+  console.log(`[UserProfileBadges] userId=${userId}, badges received:`, badges.length, badges);
+
   if (displayBadges.length === 0) return null;
 
   const sizeClasses = {
