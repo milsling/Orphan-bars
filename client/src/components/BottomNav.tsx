@@ -113,9 +113,10 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
 
   return (
     <>
+      {/* Mobile Menu Popup - phones only */}
       <AnimatePresence>
         {isOpen && (
-          <>
+          <div className="md:hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -248,7 +249,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                 </div>
               </div>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
 
