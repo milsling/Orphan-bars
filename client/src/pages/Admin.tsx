@@ -398,7 +398,6 @@ export default function Admin() {
 
   // Custom achievement state and queries (owner only)
   const [newAchievementName, setNewAchievementName] = useState("");
-  const [newAchievementEmoji, setNewAchievementEmoji] = useState("");
   const [newAchievementDescription, setNewAchievementDescription] = useState("");
   const [newAchievementRarity, setNewAchievementRarity] = useState("common");
   const [newAchievementCondition, setNewAchievementCondition] = useState("bars_posted");
@@ -650,7 +649,7 @@ export default function Admin() {
   });
 
   const createAchievementMutation = useMutation({
-    mutationFn: async (data: { name: string; emoji: string; description: string; rarity: string; conditionType: string; threshold: number; ruleTree?: any }) => {
+    mutationFn: async (data: { name: string; description: string; rarity: string; conditionType: string; threshold: number; ruleTree?: any }) => {
       const res = await fetch('/api/admin/achievements/custom', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -664,7 +663,6 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'achievements', 'custom'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'achievements', 'pending'] });
       setNewAchievementName("");
-      setNewAchievementEmoji("");
       setNewAchievementDescription("");
       setNewAchievementRarity("common");
       setNewAchievementCondition("bars_posted");
@@ -2238,17 +2236,6 @@ export default function Admin() {
                           data-testid="input-achievement-name"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="achievement-emoji">Emoji</Label>
-                        <Input
-                          id="achievement-emoji"
-                          placeholder="e.g., 👑"
-                          value={newAchievementEmoji}
-                          onChange={(e) => setNewAchievementEmoji(e.target.value)}
-                          maxLength={4}
-                          data-testid="input-achievement-emoji"
-                        />
-                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="achievement-description">Description</Label>
@@ -2555,7 +2542,6 @@ export default function Admin() {
                         if (useAdvancedMode) {
                           createAchievementMutation.mutate({
                             name: newAchievementName,
-                            emoji: newAchievementEmoji,
                             description: newAchievementDescription,
                             rarity: newAchievementRarity,
                             conditionType: ruleConditions[0]?.metric || "bars_posted",
@@ -2565,7 +2551,6 @@ export default function Admin() {
                         } else {
                           createAchievementMutation.mutate({
                             name: newAchievementName,
-                            emoji: newAchievementEmoji,
                             description: newAchievementDescription,
                             rarity: newAchievementRarity,
                             conditionType: newAchievementCondition,
@@ -2573,7 +2558,7 @@ export default function Admin() {
                           });
                         }
                       }}
-                      disabled={!newAchievementName.trim() || !newAchievementEmoji.trim() || !newAchievementDescription.trim() || createAchievementMutation.isPending}
+                      disabled={!newAchievementName.trim() || !newAchievementDescription.trim() || createAchievementMutation.isPending}
                       className="w-full"
                       data-testid="button-create-achievement"
                     >
