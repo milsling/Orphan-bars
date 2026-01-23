@@ -4,7 +4,7 @@ import { storage, generateProofHash } from "./storage";
 import { setupAuth, isAuthenticated, hashPassword, sessionParser } from "./auth";
 import { bars, likes, users } from "@shared/schema";
 import { db } from "./db";
-import { eq, count } from "drizzle-orm";
+import { eq, count, sql } from "drizzle-orm";
 import passport from "passport";
 import { insertUserSchema, insertBarSchema, updateBarSchema, ACHIEVEMENTS } from "@shared/schema";
 import { fromError } from "zod-validation-error";
@@ -2695,19 +2695,56 @@ export async function registerRoutes(
   // Debug endpoint to check badge status for current user
   app.get("/api/debug/my-badges", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user!.id);
-      const displayedBadgeIds = user?.displayedBadges || [];
-      const resolvedBadges = await storage.getUserDisplayedBadges(req.user!.id);
+      // First try to get raw data to see what's stored
+      const rawResult = await db
+        .select({ displayedBadges: sql`displayed_badges::text` })
+        .from(users)
+        .where(eq(users.id, req.user!.id));
+      
+      const rawValue = rawResult[0]?.displayedBadges || 'null';
+      
+      let displayedBadgeIds: string[] = [];
+      let resolvedBadges: any[] = [];
+      let error = null;
+      
+      try {
+        const user = await storage.getUser(req.user!.id);
+        displayedBadgeIds = user?.displayedBadges || [];
+        resolvedBadges = await storage.getUserDisplayedBadges(req.user!.id);
+      } catch (e: any) {
+        error = e.message;
+      }
       
       res.json({
         userId: req.user!.id,
-        username: user?.username,
+        rawDatabaseValue: rawValue,
         displayedBadgeIds,
         resolvedBadgesCount: resolvedBadges.length,
         resolvedBadges: resolvedBadges.map(b => ({ id: b.id, name: b.displayName })),
+        error,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Fix corrupted displayedBadges for current user (GET for easy phone access)
+  app.get("/api/debug/fix-my-badges", isAuthenticated, async (req, res) => {
+    try {
+      // Reset displayedBadges to empty array
+      await db.update(users).set({ displayedBadges: [] }).where(eq(users.id, req.user!.id));
+      res.send(`
+        <html>
+          <body style="font-family: sans-serif; padding: 20px; background: #1a1a2e; color: white;">
+            <h1>✅ Badges Fixed!</h1>
+            <p>Your badge data has been reset.</p>
+            <p>Now go back to the app and select your badges again on the <strong>Badges</strong> page.</p>
+            <a href="/" style="color: #8b5cf6;">Go to Home</a>
+          </body>
+        </html>
+      `);
+    } catch (error: any) {
+      res.status(500).send(`Error: ${error.message}`);
     }
   });
 

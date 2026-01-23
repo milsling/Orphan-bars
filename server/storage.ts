@@ -2417,10 +2417,21 @@ export class DatabaseStorage implements IStorage {
   async getDisplayedBadgesForUsers(userIds: string[]): Promise<Map<string, ProfileBadge[]>> {
     if (userIds.length === 0) return new Map();
     
-    const usersWithBadges = await db
-      .select({ id: users.id, displayedBadges: users.displayedBadges })
-      .from(users)
-      .where(sql`${users.id} = ANY(${userIds})`);
+    let usersWithBadges: { id: string; displayedBadges: string[] | null }[] = [];
+    try {
+      usersWithBadges = await db
+        .select({ id: users.id, displayedBadges: users.displayedBadges })
+        .from(users)
+        .where(sql`${users.id} = ANY(${userIds})`);
+    } catch (error: any) {
+      console.error("[BADGES STORAGE] Error fetching users with badges:", error.message);
+      // If there's a malformed array, try fetching without the displayedBadges
+      const usersOnly = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`${users.id} = ANY(${userIds})`);
+      usersWithBadges = usersOnly.map(u => ({ id: u.id, displayedBadges: null }));
+    }
     
     console.log("[BADGES STORAGE] Users fetched:", usersWithBadges.map(u => ({ id: u.id, displayedBadges: u.displayedBadges })));
     
