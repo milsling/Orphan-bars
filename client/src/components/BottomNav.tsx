@@ -363,7 +363,7 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
       </div>
 
       {/* Tablet/Desktop FAB Menu - shows on md screens and larger */}
-      <div className="hidden md:block fixed bottom-6 right-6 z-[100]">
+      <div className="hidden md:block fixed bottom-4 right-4 z-[100]">
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -379,151 +379,171 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
         <div className="relative z-50">
           <AnimatePresence>
             {isOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute bottom-16 right-0 flex flex-col items-end gap-2 mb-2"
-              >
-                {/* Drop a Bar */}
+              <>
+                {/* Quarter Pie Arc - fans out diagonally */}
+                {/* Position 1: Up-left diagonal (Drop a Bar) */}
                 {currentUser && (
                   <motion.button
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: 0.05 }}
+                    initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                    animate={{ opacity: 1, scale: 1, x: -50, y: -50 }}
+                    exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                    transition={{ duration: 0.2, delay: 0.02 }}
                     onClick={() => { handleNavClick("/post"); setIsOpen(false); }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+                    className="absolute bottom-0 right-0 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
                     data-testid="fab-drop-bar"
+                    title="Drop a Bar"
                   >
-                    <span className="font-medium whitespace-nowrap" style={{ fontFamily: 'var(--font-logo)' }}>Drop a Bar</span>
                     <Plus className="w-5 h-5" />
                   </motion.button>
                 )}
 
-                {/* Friends */}
+                {/* Position 2: More up (Orphie) */}
                 {currentUser && (
                   <motion.button
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: 0.1 }}
-                    onClick={() => { handleNavClick("/friends"); setIsOpen(false); }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
-                    data-testid="fab-friends"
-                  >
-                    <span className="font-medium">Friends</span>
-                    <div className="relative">
-                      <Users className="w-5 h-5" />
-                      {pendingFriendRequests > 0 && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      )}
-                    </div>
-                  </motion.button>
-                )}
-
-                {/* Messages */}
-                {currentUser && (
-                  <motion.button
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: 0.15 }}
-                    onClick={() => { handleNavClick("/messages"); setIsOpen(false); }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
-                    data-testid="fab-messages"
-                  >
-                    <span className="font-medium">Messages</span>
-                    <div className="relative">
-                      <MessageCircle className="w-5 h-5" />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      )}
-                    </div>
-                  </motion.button>
-                )}
-
-                {/* Profile */}
-                {currentUser && (
-                  <motion.button
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: 0.2 }}
-                    onClick={() => { handleNavClick("/profile"); setIsOpen(false); }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
-                    data-testid="fab-profile"
-                  >
-                    <span className="font-medium">Profile</span>
-                    <User className="w-5 h-5" />
-                  </motion.button>
-                )}
-
-                {/* Home */}
-                <motion.button
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ delay: 0.25 }}
-                  onClick={() => { handleNavClick("/"); setIsOpen(false); }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
-                  data-testid="fab-home"
-                >
-                  <span className="font-medium">Home</span>
-                  <Home className="w-5 h-5" />
-                </motion.button>
-
-                {/* Orphanage */}
-                <motion.button
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ delay: 0.3 }}
-                  onClick={() => { handleNavClick("/orphanage"); setIsOpen(false); }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
-                  data-testid="fab-orphanage"
-                >
-                  <span className="font-medium">Orphanage</span>
-                  <DoorOpen className="w-5 h-5" />
-                </motion.button>
-
-                {/* Orphie AI */}
-                {currentUser && (
-                  <motion.button
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: 0.35 }}
+                    initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                    animate={{ opacity: 1, scale: 1, x: -20, y: -70 }}
+                    exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                    transition={{ duration: 0.2, delay: 0.04 }}
                     onClick={() => { setIsOpen(false); setOrphieOpen(true); }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-full shadow-lg hover:from-purple-500 hover:to-purple-400 transition-colors"
+                    className="absolute bottom-0 right-0 w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-purple-500 text-white shadow-lg hover:from-purple-500 hover:to-purple-400 transition-colors flex items-center justify-center"
                     data-testid="fab-orphie"
+                    title="Orphie AI"
                   >
-                    <span className="font-medium">Orphie</span>
                     <Sparkles className="w-5 h-5" />
                   </motion.button>
                 )}
 
-                {/* Admin */}
-                {currentUser?.isAdmin && (
+                {/* Position 3: Left (Orphanage) */}
+                <motion.button
+                  initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  animate={{ opacity: 1, scale: 1, x: -70, y: -20 }}
+                  exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                  transition={{ duration: 0.2, delay: 0.06 }}
+                  onClick={() => { handleNavClick("/orphanage"); setIsOpen(false); }}
+                  className="absolute bottom-0 right-0 w-12 h-12 rounded-full bg-card border border-border text-foreground shadow-lg hover:bg-muted transition-colors flex items-center justify-center"
+                  data-testid="fab-orphanage"
+                  title="Orphanage"
+                >
+                  <DoorOpen className="w-5 h-5" />
+                </motion.button>
+
+                {/* Vertical sidebar going upward */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.2, delay: 0.1 }}
+                  className="absolute bottom-16 right-0 flex flex-col items-end gap-2"
+                >
+                  {/* Home */}
                   <motion.button
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: 0.4 }}
+                    transition={{ delay: 0.12 }}
+                    onClick={() => { handleNavClick("/"); setIsOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                    data-testid="fab-home"
+                  >
+                    <span className="text-sm font-medium">Home</span>
+                    <Home className="w-4 h-4" />
+                  </motion.button>
+
+                  {/* Profile */}
+                  {currentUser && (
+                    <motion.button
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: 0.15 }}
+                      onClick={() => { handleNavClick("/profile"); setIsOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                      data-testid="fab-profile"
+                    >
+                      <span className="text-sm font-medium">Profile</span>
+                      <User className="w-4 h-4" />
+                    </motion.button>
+                  )}
+
+                  {/* Messages */}
+                  {currentUser && (
+                    <motion.button
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: 0.18 }}
+                      onClick={() => { handleNavClick("/messages"); setIsOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                      data-testid="fab-messages"
+                    >
+                      <span className="text-sm font-medium">Messages</span>
+                      <div className="relative">
+                        <MessageCircle className="w-4 h-4" />
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        )}
+                      </div>
+                    </motion.button>
+                  )}
+
+                  {/* Friends */}
+                  {currentUser && (
+                    <motion.button
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: 0.21 }}
+                      onClick={() => { handleNavClick("/friends"); setIsOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                      data-testid="fab-friends"
+                    >
+                      <span className="text-sm font-medium">Friends</span>
+                      <div className="relative">
+                        <Users className="w-4 h-4" />
+                        {pendingFriendRequests > 0 && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        )}
+                      </div>
+                    </motion.button>
+                  )}
+
+                  {/* Saved */}
+                  {currentUser && (
+                    <motion.button
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: 0.24 }}
+                      onClick={() => { handleNavClick("/saved"); setIsOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                      data-testid="fab-saved"
+                    >
+                      <span className="text-sm font-medium">Saved</span>
+                      <Bookmark className="w-4 h-4" />
+                    </motion.button>
+                  )}
+                </motion.div>
+
+                {/* Admin button - shoots out to the LEFT */}
+                {currentUser?.isAdmin && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0, x: 0 }}
+                    animate={{ opacity: 1, scale: 1, x: -70 }}
+                    exit={{ opacity: 0, scale: 0, x: 0 }}
+                    transition={{ duration: 0.2, delay: 0.25 }}
                     onClick={() => { handleNavClick("/admin"); setIsOpen(false); }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                    className="absolute bottom-0 right-0 flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-full shadow-lg hover:bg-amber-500 transition-colors"
                     data-testid="fab-admin"
                   >
-                    <span className="font-medium">Admin</span>
-                    <Shield className="w-5 h-5" />
+                    <Shield className="w-4 h-4" />
+                    <span className="text-sm font-medium">Admin</span>
                   </motion.button>
                 )}
-              </motion.div>
+              </>
             )}
           </AnimatePresence>
 
-          {/* FAB Button */}
+          {/* FAB Button - tucked in corner */}
           <motion.button
             onClick={handleCenterClick}
             className={cn(
