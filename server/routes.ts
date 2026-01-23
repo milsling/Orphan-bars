@@ -2692,6 +2692,25 @@ export async function registerRoutes(
     }
   });
 
+  // Debug endpoint to check badge status for current user
+  app.get("/api/debug/my-badges", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      const displayedBadgeIds = user?.displayedBadges || [];
+      const resolvedBadges = await storage.getUserDisplayedBadges(req.user!.id);
+      
+      res.json({
+        userId: req.user!.id,
+        username: user?.username,
+        displayedBadgeIds,
+        resolvedBadgesCount: resolvedBadges.length,
+        resolvedBadges: resolvedBadges.map(b => ({ id: b.id, name: b.displayName })),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Set displayed badges for current user (accepts both profile badges AND achievement IDs)
   app.patch("/api/badges/displayed", isAuthenticated, async (req, res) => {
     try {
