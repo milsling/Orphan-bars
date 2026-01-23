@@ -26,38 +26,38 @@ export default function Navigation() {
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 border-b border-border/50 bg-background/90 backdrop-blur-lg z-50 items-center px-6 justify-between pt-[env(safe-area-inset-top)] shadow-sm">
-        <div className="flex items-center gap-6">
+      <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 border-b border-border/50 bg-background/90 backdrop-blur-lg z-50 items-center px-4 lg:px-6 justify-between pt-[env(safe-area-inset-top)] shadow-sm">
+        <div className="flex items-center gap-3 lg:gap-6 shrink-0">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-              <img src={headerLogo} alt="" className="h-8 w-8" />
-              <span className="font-logo leading-none text-5xl xl:text-6xl">ORPHAN BARS</span>
+              <img src={headerLogo} alt="" className="h-7 w-7 lg:h-8 lg:w-8" />
+              <span className="font-logo leading-none text-2xl lg:text-3xl xl:text-4xl">ORPHAN BARS</span>
             </div>
           </Link>
-          <SearchBar className="w-64" />
+          <SearchBar className="w-48 lg:w-64" />
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 lg:gap-2 overflow-x-auto shrink min-w-0">
           {/* Main nav items */}
           <Link href="/">
             <div className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer",
+              "flex items-center gap-1 px-2 lg:px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer whitespace-nowrap",
               location === "/" ? "text-primary" : "text-muted-foreground"
             )}>
               <Home className="h-4 w-4" />
-              Feed
+              <span className="hidden lg:inline">Feed</span>
             </div>
           </Link>
           
           <Link href="/orphanage">
             <div className={cn(
-              "px-3 py-1.5 rounded-md transition-colors hover:bg-muted cursor-pointer",
+              "px-2 lg:px-3 py-1.5 rounded-md transition-colors hover:bg-muted cursor-pointer",
               location === "/orphanage" ? "opacity-100" : "opacity-70 hover:opacity-100"
             )}>
               <img 
                 src={orphanageLogo} 
                 alt="Orphanage" 
-                className="h-6 w-auto dark:invert dark:brightness-200"
+                className="h-5 lg:h-6 w-auto dark:invert dark:brightness-200"
               />
             </div>
           </Link>
@@ -66,7 +66,7 @@ export default function Navigation() {
             <>
               <Link href="/friends">
                 <div className={cn(
-                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer",
+                  "relative flex items-center gap-1 px-2 lg:px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer whitespace-nowrap",
                   location === "/friends" ? "text-primary" : "text-muted-foreground",
                   pendingFriendRequests > 0 && location !== "/friends" && "text-primary"
                 )}>
@@ -78,13 +78,13 @@ export default function Navigation() {
                       </span>
                     )}
                   </div>
-                  Friends
+                  <span className="hidden lg:inline">Friends</span>
                 </div>
               </Link>
               
               <Link href="/messages">
                 <div className={cn(
-                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer",
+                  "relative flex items-center gap-1 px-2 lg:px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-muted cursor-pointer whitespace-nowrap",
                   location === "/messages" ? "text-primary" : "text-muted-foreground",
                   unreadCount > 0 && location !== "/messages" && "text-primary"
                 )}>
@@ -96,7 +96,7 @@ export default function Navigation() {
                       </span>
                     )}
                   </div>
-                  Messages
+                  <span className="hidden lg:inline">Messages</span>
                 </div>
               </Link>
               
@@ -104,20 +104,20 @@ export default function Navigation() {
               {isOnMessagesPage ? (
                 <button
                   onClick={() => setNewMessageOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary text-primary-foreground font-bold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20"
+                  className="flex items-center gap-1 px-3 lg:px-4 py-1.5 rounded-full bg-primary text-primary-foreground font-bold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20 whitespace-nowrap"
                   data-testid="button-new-message"
                 >
                   <PenLine className="h-4 w-4" />
-                  New Message
+                  <span className="hidden lg:inline">New Message</span>
                 </button>
               ) : (
                 <Link href="/post">
                   <div className={cn(
-                    "flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary text-primary-foreground font-bold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20",
+                    "flex items-center gap-1 px-3 lg:px-4 py-1.5 rounded-full bg-primary text-primary-foreground font-bold text-sm transition-transform hover:scale-105 active:scale-95 shadow-md shadow-primary/20 whitespace-nowrap",
                     location === "/post" && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                   )}>
                     <Plus className="h-4 w-4" />
-                    Drop Bar
+                    <span className="hidden lg:inline">Drop Bar</span>
                   </div>
                 </Link>
               )}
@@ -157,6 +157,7 @@ export default function Navigation() {
           )}
           
           <OnlineStatusIndicator />
+          <ThemeToggle />
           
           {!currentUser && (
             <Link href="/auth">
