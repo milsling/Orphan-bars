@@ -16,7 +16,8 @@ import {
   DoorOpen,
   Heart,
   BarChart3,
-  Sparkles
+  Sparkles,
+  LayoutGrid
 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { cn } from "@/lib/utils";
@@ -522,6 +523,20 @@ export function BottomNav({ onNewMessage }: BottomNavProps) {
                       <Bookmark className="w-4 h-4" />
                     </motion.button>
                   )}
+
+                  {/* Apps */}
+                  <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: 0.27 }}
+                    onClick={() => { handleNavClick("/apps"); setIsOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 bg-card border border-border text-foreground rounded-full shadow-lg hover:bg-muted transition-colors"
+                    data-testid="fab-apps"
+                  >
+                    <span className="text-sm font-medium">Apps</span>
+                    <LayoutGrid className="w-4 h-4" />
+                  </motion.button>
                 </motion.div>
 
                 {/* Admin button - shoots out to the LEFT */}

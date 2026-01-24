@@ -4042,6 +4042,9 @@ export default function Admin() {
                             <span className="text-xs text-muted-foreground">Jan 2026</span>
                           </div>
                           <ul className="mt-2 text-sm text-muted-foreground space-y-1">
+                            <li>• Apps menu with creative writing tools</li>
+                            <li>• Notebook app for saving writing documents</li>
+                            <li>• Rhyme Dictionary using Datamuse API</li>
                             <li>• Features & Version History section in Owner Console</li>
                             <li>• Redesigned tablet FAB menu with quarter-pie arc animation</li>
                             <li>• Vertical sidebar navigation going upward</li>
