@@ -13,7 +13,7 @@ You need a PostgreSQL database. Choose one:
 **Option A: Local PostgreSQL**
 ```bash
 # Install PostgreSQL locally
-sudo apt-get install postgresql postgresql-contrib
+
 
 # Start the service
 sudo service postgresql start

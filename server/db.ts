@@ -1,8 +1,6 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import * as schema from "@shared/schema";
-
-const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -10,24 +8,16 @@ if (!connectionString) {
   console.error("DATABASE_URL is not set. Database operations will fail.");
 }
 
-export const pool = new Pool({ 
-  connectionString,
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  max: 10,
-});
+const sql = neon(connectionString || "");
 
-pool.on('error', (err) => {
-  console.error('Unexpected database pool error:', err);
-});
+export const db = drizzle(sql, { schema });
 
-export const db = drizzle(pool, { schema });
+// For serverless connections, we expose the sql instance for direct queries if needed
+export const sqlQuery = sql;
 
 export async function testDatabaseConnection(): Promise<boolean> {
   try {
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
+    await sql`SELECT 1`;
     console.log('Database connection successful');
     return true;
   } catch (error) {
