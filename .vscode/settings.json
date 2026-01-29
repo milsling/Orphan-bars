@@ -1,0 +1,6 @@
+{
+    "window.autoDetectColorScheme": true,
+    "workbench.colorTheme": "Ayu Light",
+    "workbench.preferredDarkColorTheme": "Ayu Light",
+    "workbench.preferredLightColorTheme": "Visual Studio Light"
+}
