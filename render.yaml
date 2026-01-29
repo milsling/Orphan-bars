@@ -1,0 +1,48 @@
+# Exported from Render on 2026-01-29T15:05:20Z
+version: "1"
+projects:
+- name: ORPHAN BARS
+  environments:
+  - name: Production
+    services:
+    - type: web
+      name: Orphan-bars
+      runtime: node
+      repo: https://github.com/milsling/Orphan-bars
+      plan: free
+      envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PGCHANNELBINDING
+        sync: false
+      - key: PGSSLMODE
+        sync: false
+      - key: PGPASSWORD
+        sync: false
+      - key: PGHOST
+        sync: false
+      - key: DEFAULT_OBJECT_STORAGE_BUCKET_ID
+        sync: false
+      - key: AI_INTEGRATIONS_OPENAI_API_KEY
+        sync: false
+      - key: VITE_NEON_AUTH_URL
+        sync: false
+      - key: PGDATABASE
+        sync: false
+      - key: PGUSER
+        sync: false
+      - key: PGPORT
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: AI_INTEGRATIONS_OPENAI_BASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      region: oregon
+      buildCommand: npm install; npm run build
+      startCommand: npm run start
+      domains:
+      - www.orphanbars.com
+      - orphanbars.com
+      autoDeployTrigger: commit
