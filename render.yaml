@@ -43,6 +43,6 @@ projects:
       buildCommand: npm install; npm run build
       startCommand: npm run start
       domains:
-      - www.orphanbars.com
+      - orphan-bars.onrender.com
       - orphanbars.com
       autoDeployTrigger: commit
