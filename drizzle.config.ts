@@ -13,7 +13,4 @@ export default defineConfig({
   },
 });
 
-// Before (and still works after update)
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
 
