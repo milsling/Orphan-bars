@@ -10,6 +10,7 @@ export default defineConfig({
     tailwindcss(),
     metaImagesPlugin(),
   ],
+
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -17,16 +18,34 @@ export default defineConfig({
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
+
   css: {
     postcss: {
       plugins: [],
     },
   },
+
   root: path.resolve(import.meta.dirname, "client"),
+
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+
+    // ← THIS IS THE FIX
+    // Tell Vite/Rollup: do NOT bundle these server-only packages
+    rollupOptions: {
+      external: [
+        'openai',
+        // optional: add other node-only things if you ever import them in client code by mistake
+        'fs',
+        'path',
+        'child_process',
+        'crypto',           // sometimes needed
+        'stream',           // common in node packages
+      ],
+    },
   },
+
   server: {
     host: "0.0.0.0",
     allowedHosts: true,
